@@ -106,10 +106,21 @@ begin
 end;
 $$;
 
-create trigger profiles_set_updated_at before update on public.profiles for each row execute function public.set_updated_at();
-create trigger projects_set_updated_at before update on public.projects for each row execute function public.set_updated_at();
-create trigger notification_settings_set_updated_at before update on public.notification_settings for each row execute function public.set_updated_at();
-create trigger scan_schedules_set_updated_at before update on public.scan_schedules for each row execute function public.set_updated_at();
+do $$
+begin
+  if not exists (select 1 from pg_trigger where tgname = 'profiles_set_updated_at') then
+    create trigger profiles_set_updated_at before update on public.profiles for each row execute function public.set_updated_at();
+  end if;
+  if not exists (select 1 from pg_trigger where tgname = 'projects_set_updated_at') then
+    create trigger projects_set_updated_at before update on public.projects for each row execute function public.set_updated_at();
+  end if;
+  if not exists (select 1 from pg_trigger where tgname = 'notification_settings_set_updated_at') then
+    create trigger notification_settings_set_updated_at before update on public.notification_settings for each row execute function public.set_updated_at();
+  end if;
+  if not exists (select 1 from pg_trigger where tgname = 'scan_schedules_set_updated_at') then
+    create trigger scan_schedules_set_updated_at before update on public.scan_schedules for each row execute function public.set_updated_at();
+  end if;
+end $$;
 
 create index if not exists projects_user_id_idx on public.projects(user_id);
 create index if not exists dependency_scans_user_id_idx on public.dependency_scans(user_id);
@@ -131,12 +142,27 @@ alter table public.dependency_scan_items enable row level security;
 alter table public.notification_settings enable row level security;
 alter table public.scan_schedules enable row level security;
 
-create policy "profiles own rows" on public.profiles for all using (id = auth.uid()) with check (id = auth.uid());
-create policy "projects own rows" on public.projects for all using (user_id = auth.uid()) with check (user_id = auth.uid());
-create policy "dependency_scans own rows" on public.dependency_scans for all using (user_id = auth.uid()) with check (user_id = auth.uid());
-create policy "dependency_scan_items own rows" on public.dependency_scan_items for all using (user_id = auth.uid()) with check (user_id = auth.uid());
-create policy "notification_settings own rows" on public.notification_settings for all using (user_id = auth.uid()) with check (user_id = auth.uid());
-create policy "scan_schedules own rows" on public.scan_schedules for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+do $$
+begin
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'profiles' and policyname = 'profiles own rows') then
+    create policy "profiles own rows" on public.profiles for all using (id = auth.uid()) with check (id = auth.uid());
+  end if;
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'projects' and policyname = 'projects own rows') then
+    create policy "projects own rows" on public.projects for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+  end if;
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'dependency_scans' and policyname = 'dependency_scans own rows') then
+    create policy "dependency_scans own rows" on public.dependency_scans for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+  end if;
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'dependency_scan_items' and policyname = 'dependency_scan_items own rows') then
+    create policy "dependency_scan_items own rows" on public.dependency_scan_items for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+  end if;
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'notification_settings' and policyname = 'notification_settings own rows') then
+    create policy "notification_settings own rows" on public.notification_settings for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+  end if;
+  if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = 'scan_schedules' and policyname = 'scan_schedules own rows') then
+    create policy "scan_schedules own rows" on public.scan_schedules for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+  end if;
+end $$;
 
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
@@ -147,4 +173,9 @@ begin
 end;
 $$;
 
-create trigger on_auth_user_created after insert on auth.users for each row execute function public.handle_new_user();
+do $$
+begin
+  if not exists (select 1 from pg_trigger where tgname = 'on_auth_user_created') then
+    create trigger on_auth_user_created after insert on auth.users for each row execute function public.handle_new_user();
+  end if;
+end $$;
