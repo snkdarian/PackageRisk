@@ -66,11 +66,11 @@ export interface ProjectEditorResult {
   `,
   styles: `
     :host { display: block; width: min(620px, calc(100vw - 32px)); max-width: 100%; }
-    .dialog-shell { display: grid; gap: 16px; padding: 22px; overflow: hidden; }
+    .dialog-shell { display: grid; gap: 20px; padding: 24px; overflow: hidden; }
     .dialog-title { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
     .dialog-title h2 { margin: 0; font-size: 1.35rem; }
-    .dialog-form { display: grid; gap: 12px; width: 100%; min-width: 0; overflow: hidden; }
-    .dialog-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .dialog-form { display: grid; gap: 18px; width: 100%; min-width: 0; overflow: hidden; padding-top: 2px; }
+    .dialog-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
     .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; }
     @media (max-width: 640px) {
       .dialog-shell { max-height: calc(100vh - 32px); overflow: auto; padding: 18px; }
