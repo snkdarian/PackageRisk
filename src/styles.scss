@@ -190,6 +190,8 @@ main { padding: 32px 32px 42px; min-height: calc(100vh - 64px); }
 .dashboard-grid mat-card, .table-card, .form-card, .settings-card { padding: 22px !important; }
 .dashboard-filters { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 18px 0; }
 .dashboard-filters mat-form-field { width: min(340px, 100%); margin-bottom: -18px; }
+.history-filters { justify-content: flex-start; flex-wrap: wrap; }
+.history-filters mat-form-field { width: min(260px, 100%); }
 .segmented-control { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 8px; background: color-mix(in srgb, var(--surface-2) 80%, transparent); }
 .segmented-control button { min-height: 34px; padding: 7px 12px; border: 0; color: var(--muted); background: transparent; cursor: pointer; }
 .segmented-control button.active { color: var(--text); background: color-mix(in srgb, var(--primary) 18%, var(--surface-3)); }
@@ -332,6 +334,8 @@ code { display: block; padding: 12px; border-radius: 8px; background: var(--surf
 .compare-list p { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: color-mix(in srgb, var(--surface-2) 72%, transparent); color: var(--text); }
 .compare-list .metric-badge { margin-right: auto; }
 .empty-state { padding: 28px !important; display: grid !important; gap: 12px; justify-items: start; }
+.inline-empty { padding: 24px 0 4px !important; }
+.inline-empty mat-icon { color: var(--primary); }
 .dashboard-empty { margin: 18px 0; }
 .dashboard-empty mat-icon { color: var(--primary); font-size: 34px; width: 34px; height: 34px; }
 .risky-card { margin-bottom: 18px; }
