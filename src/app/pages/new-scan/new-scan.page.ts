@@ -32,7 +32,7 @@ const SAMPLE = `{
   imports: [ReactiveFormsModule, MatButtonModule, MatCardModule, MatFormFieldModule, MatIconModule, MatInputModule, MatProgressSpinnerModule, MatSelectModule, MatSnackBarModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <section class="page-head"><h1>{{ i18n.t('scan.title') }}</h1><p>{{ i18n.t('scan.subtitle') }}</p></section>
+    <section class="page-head page-hero row"><div><span class="section-kicker">{{ i18n.t('nav.newScan') }}</span><h1>{{ i18n.t('scan.title') }}</h1><p>{{ i18n.t('scan.subtitle') }}</p></div></section>
     <section class="scan-layout">
       <mat-card class="scan-input">
         <form [formGroup]="form" (ngSubmit)="run()">
@@ -40,13 +40,30 @@ const SAMPLE = `{
             <mat-form-field appearance="outline"><mat-label>{{ i18n.t('table.project') }}</mat-label><mat-select formControlName="projectId">@for (project of projects.projects(); track project.id) { <mat-option [value]="project.id">{{ project.name }}</mat-option> }</mat-select></mat-form-field>
             <mat-form-field appearance="outline"><mat-label>{{ i18n.t('field.packageManager') }}</mat-label><mat-select formControlName="packageManager"><mat-option value="npm">npm</mat-option><mat-option value="yarn">yarn</mat-option><mat-option value="pnpm">pnpm</mat-option></mat-select></mat-form-field>
           </div>
-          <div class="editor-head"><strong>{{ i18n.t('scan.pastePackage') }}</strong><button mat-button type="button" (click)="loadSample()">{{ i18n.t('scan.useSample') }}</button></div>
-          <mat-form-field appearance="outline" class="json-field"><mat-label>package.json</mat-label><textarea matInput rows="15" formControlName="packageJson"></textarea></mat-form-field>
-          @if (dependencyCount()) { <p class="dependency-preview"><mat-icon>inventory_2</mat-icon>{{ dependencyCount() }} {{ i18n.t('scan.dependenciesDetected') }}</p> }
+          <div class="editor-head">
+            <strong>{{ i18n.t('scan.pastePackage') }}</strong>
+            <div class="editor-actions">
+              <label class="upload-action">
+                <mat-icon>upload_file</mat-icon>
+                {{ i18n.t('scan.uploadPackage') }}
+                <input type="file" accept=".json,application/json" (change)="uploadPackage($event)" />
+              </label>
+              <button mat-button type="button" (click)="loadSample()">{{ i18n.t('scan.useSample') }}</button>
+            </div>
+          </div>
+          <mat-form-field appearance="outline" class="json-field"><mat-label>package.json</mat-label><textarea matInput rows="13" formControlName="packageJson"></textarea></mat-form-field>
+          <div class="scan-preview">
+            <span [class]="'status-badge ' + (packageStatus().valid ? 'completed' : 'failed')">{{ packageStatus().valid ? i18n.t('scan.validJson') : i18n.t('scan.invalidPackage') }}</span>
+            <span class="metric-badge health good">{{ dependencyStats().dependencies }} {{ i18n.t('scan.prodDependencies') }}</span>
+            <span class="metric-badge health warn">{{ dependencyStats().devDependencies }} {{ i18n.t('scan.devDependencies') }}</span>
+            <span class="metric-badge health good">{{ dependencyStats().total }} {{ i18n.t('scan.dependenciesDetected') }}</span>
+          </div>
           @if (error()) { <p class="form-error">{{ error() }}</p> }
           @if (!projects.projects().length) { <p class="form-error">{{ i18n.t('scan.createProjectFirst') }}</p> }
-          <button mat-flat-button type="submit" [disabled]="loading() || form.invalid || !projects.projects().length"><mat-icon>play_arrow</mat-icon>{{ loading() ? i18n.t('scan.analyzing') : i18n.t('scan.analyze') }}</button>
-          @if (loading()) { <mat-spinner diameter="32" /> }
+          <div class="scan-submit">
+            <button mat-flat-button type="submit" class="primary-action" [disabled]="loading() || form.invalid || !projects.projects().length || !packageStatus().valid"><mat-icon>play_arrow</mat-icon>{{ loading() ? i18n.t('scan.analyzing') : retryReady() ? i18n.t('scan.retry') : i18n.t('scan.analyze') }}</button>
+            @if (loading()) { <mat-spinner diameter="32" /> }
+          </div>
         </form>
       </mat-card>
       <aside>
@@ -65,21 +82,51 @@ export class NewScanPage {
   readonly i18n = inject(I18nService);
   readonly loading = signal(false);
   readonly error = signal('');
+  readonly retryReady = signal(false);
   readonly form = this.fb.nonNullable.group({
     projectId: ['', Validators.required],
     packageManager: ['npm'],
     packageJson: [SAMPLE, Validators.required],
   });
-  readonly dependencyCount = computed(() => {
+  readonly packageStatus = computed(() => {
+    try {
+      JSON.parse(this.form.controls.packageJson.value);
+      return { valid: true };
+    } catch {
+      return { valid: false };
+    }
+  });
+  readonly dependencyStats = computed(() => {
     try {
       const parsed = JSON.parse(this.form.controls.packageJson.value);
-      return Object.keys(parsed.dependencies ?? {}).length + Object.keys(parsed.devDependencies ?? {}).length;
+      const dependencies = Object.keys(parsed.dependencies ?? {}).length;
+      const devDependencies = Object.keys(parsed.devDependencies ?? {}).length;
+      return { dependencies, devDependencies, total: dependencies + devDependencies };
     } catch {
-      return 0;
+      return { dependencies: 0, devDependencies: 0, total: 0 };
     }
   });
 
-  loadSample() { this.form.controls.packageJson.setValue(SAMPLE); }
+  loadSample() {
+    this.error.set('');
+    this.retryReady.set(false);
+    this.form.controls.packageJson.setValue(SAMPLE);
+  }
+
+  async uploadPackage(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    try {
+      this.form.controls.packageJson.setValue(await file.text());
+      this.error.set('');
+      this.retryReady.set(false);
+    } catch {
+      this.error.set(this.i18n.t('scan.fileReadFailed'));
+    } finally {
+      input.value = '';
+    }
+  }
 
   constructor() {
     effect(() => {
@@ -92,6 +139,7 @@ export class NewScanPage {
 
   async run() {
     this.error.set('');
+    this.retryReady.set(false);
     let parsed: any;
     try {
       parsed = JSON.parse(this.form.controls.packageJson.value);
@@ -110,6 +158,7 @@ export class NewScanPage {
         ? this.i18n.t('scan.edgeUnreachable')
         : error.message ?? this.i18n.t('scan.failed');
       this.error.set(message);
+      this.retryReady.set(true);
       this.snack.open(message, this.i18n.t('common.close'), { duration: 5200 });
     }
     this.loading.set(false);

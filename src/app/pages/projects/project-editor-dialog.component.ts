@@ -22,7 +22,7 @@ export interface ProjectEditorResult {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <h2 mat-dialog-title>{{ data.project ? i18n.t('projects.editProject') : i18n.t('projects.createProject') }}</h2>
-    <mat-dialog-content>
+    <mat-dialog-content class="project-dialog-content">
       <form class="dialog-form" [formGroup]="form" (ngSubmit)="save()">
         <mat-form-field appearance="outline">
           <mat-label>{{ i18n.t('field.name') }}</mat-label>
@@ -58,9 +58,11 @@ export interface ProjectEditorResult {
     </mat-dialog-actions>
   `,
   styles: `
-    .dialog-form { display: grid; gap: 12px; min-width: min(560px, 78vw); padding-top: 6px; }
+    :host { display: block; overflow: hidden; }
+    .project-dialog-content { overflow: visible; max-height: none; }
+    .dialog-form { display: grid; gap: 12px; width: min(560px, 78vw); padding-top: 6px; overflow: visible; }
     .dialog-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-    @media (max-width: 640px) { .dialog-form { min-width: 0; } .dialog-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 640px) { .dialog-form { width: 100%; } .dialog-grid { grid-template-columns: 1fr; } }
   `,
 })
 export class ProjectEditorDialogComponent {
@@ -73,7 +75,7 @@ export class ProjectEditorDialogComponent {
     name: [this.data.project?.name ?? '', Validators.required],
     description: [this.data.project?.description ?? ''],
     packageManager: [this.data.project?.packageManager ?? 'npm' as PackageManager],
-    scheduleType: [this.data.project?.scheduleType ?? 'weekly' as Project['scheduleType']],
+    scheduleType: [this.data.project?.scheduleType ?? 'manual' as Project['scheduleType']],
   });
 
   save() {

@@ -63,7 +63,12 @@ h1, h2, h3, p { margin-top: 0; }
 h1 { font-size: clamp(2rem, 4vw, 3.9rem); line-height: 1.05; letter-spacing: 0; }
 h2 { font-size: 1.08rem; }
 p, small { color: var(--muted); }
-button, a[mat-flat-button], a[mat-stroked-button], a[mat-button] { border-radius: 8px !important; font-weight: 800 !important; letter-spacing: 0 !important; }
+button:not(.mat-mdc-icon-button), a[mat-flat-button], a[mat-stroked-button], a[mat-button] { border-radius: 8px !important; font-weight: 800 !important; letter-spacing: 0 !important; }
+.mat-mdc-icon-button { border-radius: 999px !important; overflow: hidden !important; }
+.mat-mdc-icon-button .mat-mdc-button-persistent-ripple,
+.mat-mdc-icon-button .mat-mdc-button-ripple,
+.mat-mdc-icon-button .mat-mdc-focus-indicator,
+.mat-mdc-icon-button .mat-mdc-button-touch-target { border-radius: inherit !important; }
 .mat-mdc-button-base { min-height: 42px; }
 .mat-mdc-form-field { width: 100%; }
 .mat-mdc-text-field-wrapper { border-radius: 8px !important; background: color-mix(in srgb, var(--surface-2) 78%, transparent) !important; }
@@ -210,9 +215,15 @@ td small { display: block; margin-top: 3px; }
 .scan-input, .scan-layout aside mat-card { padding: 24px !important; }
 .scan-layout aside { display: grid; gap: 18px; align-content: start; }
 .editor-head { display: flex; align-items: center; justify-content: space-between; }
+.editor-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+.upload-action { min-height: 38px; display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--line)); border-radius: 8px; color: var(--primary); background: color-mix(in srgb, var(--primary) 10%, transparent); font-weight: 900; cursor: pointer; }
+.upload-action input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.upload-action mat-icon { font-size: 18px; width: 18px; height: 18px; }
 .json-field { width: 100%; }
 textarea { font-family: 'Cascadia Code', Consolas, monospace !important; }
 .dependency-preview { display: flex; gap: 8px; align-items: center; color: var(--primary); font-weight: 700; }
+.scan-preview { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: -4px 0 12px; }
+.scan-submit { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .report-summary { display: grid; grid-template-columns: 1.5fr repeat(4, 1fr); gap: 16px; }
 .health-panel { padding: 22px !important; display: grid !important; justify-items: start; gap: 12px; }
 .expanded-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 22px; }
