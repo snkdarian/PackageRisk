@@ -20,9 +20,16 @@ export interface ProjectEditorResult {
   selector: 'app-project-editor-dialog',
   imports: [ReactiveFormsModule, MatButtonModule, MatDialogModule, MatFormFieldModule, MatIconModule, MatInputModule, MatSelectModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'project-editor-dialog' },
   template: `
-    <h2 mat-dialog-title>{{ data.project ? i18n.t('projects.editProject') : i18n.t('projects.createProject') }}</h2>
-    <mat-dialog-content class="project-dialog-content">
+    <div class="dialog-shell">
+      <header class="dialog-title">
+        <div>
+          <span class="section-kicker">{{ data.project ? i18n.t('projects.editProject') : i18n.t('projects.createProject') }}</span>
+          <h2>{{ data.project ? i18n.t('projects.editProject') : i18n.t('projects.createProject') }}</h2>
+        </div>
+        <button mat-icon-button mat-dialog-close [attr.aria-label]="i18n.t('common.close')"><mat-icon>close</mat-icon></button>
+      </header>
       <form class="dialog-form" [formGroup]="form" (ngSubmit)="save()">
         <mat-form-field appearance="outline">
           <mat-label>{{ i18n.t('field.name') }}</mat-label>
@@ -51,18 +58,25 @@ export interface ProjectEditorResult {
           </mat-form-field>
         </div>
       </form>
-    </mat-dialog-content>
-    <mat-dialog-actions align="end">
-      <button mat-button mat-dialog-close>{{ i18n.t('common.close') }}</button>
-      <button mat-flat-button class="primary-action compact" [disabled]="form.invalid" (click)="save()"><mat-icon>save</mat-icon>{{ i18n.t('profile.save') }}</button>
-    </mat-dialog-actions>
+      <footer class="dialog-actions">
+        <button mat-button mat-dialog-close>{{ i18n.t('common.close') }}</button>
+        <button mat-flat-button class="primary-action compact" [disabled]="form.invalid" (click)="save()"><mat-icon>save</mat-icon>{{ i18n.t('profile.save') }}</button>
+      </footer>
+    </div>
   `,
   styles: `
-    :host { display: block; overflow: hidden; }
-    .project-dialog-content { overflow: visible; max-height: none; }
-    .dialog-form { display: grid; gap: 12px; width: min(560px, 78vw); padding-top: 6px; overflow: visible; }
+    :host { display: block; width: min(620px, calc(100vw - 32px)); max-width: 100%; }
+    .dialog-shell { display: grid; gap: 16px; padding: 22px; overflow: hidden; }
+    .dialog-title { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+    .dialog-title h2 { margin: 0; font-size: 1.35rem; }
+    .dialog-form { display: grid; gap: 12px; width: 100%; min-width: 0; overflow: hidden; }
     .dialog-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-    @media (max-width: 640px) { .dialog-form { width: 100%; } .dialog-grid { grid-template-columns: 1fr; } }
+    .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; }
+    @media (max-width: 640px) {
+      .dialog-shell { max-height: calc(100vh - 32px); overflow: auto; padding: 18px; }
+      .dialog-grid { grid-template-columns: 1fr; }
+      .dialog-actions { flex-direction: column-reverse; align-items: stretch; }
+    }
   `,
 })
 export class ProjectEditorDialogComponent {
