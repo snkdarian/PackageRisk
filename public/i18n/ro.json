@@ -242,7 +242,7 @@
   "reason.major": "Exista un update major si poate include schimbari incompatibile.",
   "reason.none": "Nu a fost gasit un risc notabil din metadatele publice disponibile.",
   "reason.outdated": "Exista o versiune mai noua a pachetului.",
-  "reason.vulnerable": "Au fost gasite semnale de vulnerabilitate pentru versiunea instalata.",
+  "reason.vulnerable": "Versiunea instalata are vulnerabilitati cunoscute.",
   "explanation.abandoned": "Verifica activitatea repository-ului, timpul de raspuns la issues si optiunile de inlocuire inainte sa te bazezi pe el pe termen lung.",
   "explanation.deprecated": "Cauta ghidajul de migrare al maintainerului si evita sa adaugi utilizari noi peste acest pachet.",
   "explanation.dev": "Aceasta este o dependency de development, deci valideaza build, lint, teste si pipeline-urile CI.",

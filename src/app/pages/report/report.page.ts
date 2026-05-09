@@ -75,16 +75,21 @@ import { I18nService } from '../../core/i18n.service';
           <mat-form-field appearance="outline"><mat-label>{{ i18n.t('report.updateFilter') }}</mat-label><mat-select [value]="updateFilter()" (selectionChange)="updateFilter.set($event.value)"><mat-option value="all">{{ i18n.t('dashboard.range.all') }}</mat-option><mat-option value="major">{{ i18n.t('update.major') }}</mat-option><mat-option value="minor">{{ i18n.t('update.minor') }}</mat-option><mat-option value="patch">{{ i18n.t('update.patch') }}</mat-option><mat-option value="none">{{ i18n.t('risk.none') }}</mat-option></mat-select></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>{{ i18n.t('report.sortBy') }}</mat-label><mat-select [value]="sortBy()" (selectionChange)="sortBy.set($event.value)"><mat-option value="risk">{{ i18n.t('report.sort.risk') }}</mat-option><mat-option value="name">{{ i18n.t('report.sort.name') }}</mat-option><mat-option value="update">{{ i18n.t('report.sort.update') }}</mat-option></mat-select></mat-form-field>
         </div>
-        <div class="batch-actions">
-          <button mat-stroked-button type="button" (click)="copyBatch(safePatchItems())"><mat-icon>content_copy</mat-icon>{{ i18n.t('report.copySafePatches') }}</button>
-          <button mat-stroked-button type="button" (click)="copyBatch(fixNowItems())"><mat-icon>content_copy</mat-icon>{{ i18n.t('report.copyHighRisk') }}</button>
-        </div>
         <mat-accordion>
           @for (item of filteredItems(); track item.id) {
             <mat-expansion-panel [class]="'risk-panel ' + item.riskLevel">
               <mat-expansion-panel-header>
-                <mat-panel-title><span class="package-row-title">{{ item.packageName }} <small>{{ localizedRiskReason(item) }}</small></span></mat-panel-title>
-                <mat-panel-description><span class="version-inline">{{ item.currentVersion }} -> {{ item.latestVersion }}</span><app-risk-badge [level]="item.riskLevel" /><span [class]="'metric-badge update ' + item.updateType">{{ i18n.t('update.' + item.updateType) }}</span></mat-panel-description>
+                <mat-panel-title>
+                  <span class="package-row-title">
+                    <strong>{{ item.packageName }}</strong>
+                    <small>{{ item.currentVersion }} -> {{ item.latestVersion }}</small>
+                  </span>
+                </mat-panel-title>
+                <mat-panel-description>
+                  <span class="score-chip">{{ item.riskScore }}/100</span>
+                  <app-risk-badge [level]="item.riskLevel" />
+                  <span [class]="'metric-badge update ' + item.updateType">{{ i18n.t('update.' + item.updateType) }}</span>
+                </mat-panel-description>
               </mat-expansion-panel-header>
               <div class="expanded-grid">
                 <div><h3>{{ i18n.t('report.whyRisk') }}</h3><p>{{ localizedRiskReason(item) }}</p><p>{{ localizedExplanation(item) }}</p><p class="prediction-line">{{ prediction(item) }}</p></div>
@@ -312,10 +317,6 @@ export class ReportPage {
   }
   signed(value: number) { return value > 0 ? `+${value}` : String(value); }
   copy(command: string) { navigator.clipboard?.writeText(command); }
-  copyBatch(items: DependencyScanItem[]) {
-    const commands = [...new Set(items.map((item) => item.updateCommand).filter(Boolean))];
-    if (commands.length) this.copy(commands.join('\n'));
-  }
 }
 
 function updateRank(type: UpdateType) {

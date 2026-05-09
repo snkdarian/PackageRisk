@@ -242,7 +242,7 @@
   "reason.major": "A major version update is available and may include breaking changes.",
   "reason.none": "No notable risk was found from the available public metadata.",
   "reason.outdated": "A newer package version is available.",
-  "reason.vulnerable": "Known vulnerability signals were found for this installed version.",
+  "reason.vulnerable": "The installed version has known vulnerabilities.",
   "explanation.abandoned": "Check repository activity, issue response time, and replacement options before relying on it long term.",
   "explanation.deprecated": "Look for maintainer migration guidance and avoid adding new usage on top of this package.",
   "explanation.dev": "This is a development dependency, so focus validation on build, lint, test, and CI pipelines.",
