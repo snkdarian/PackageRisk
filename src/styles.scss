@@ -236,6 +236,14 @@ textarea { font-family: 'Cascadia Code', Consolas, monospace !important; }
 .scan-preview { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: -4px 0 12px; }
 .scan-submit { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .report-summary { display: grid; grid-template-columns: 1.5fr repeat(4, 1fr); gap: 16px; }
+.report-action-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(260px, .6fr); gap: 16px; margin-bottom: 18px; }
+.triage-card, .mini-compare-card { padding: 20px !important; display: grid !important; gap: 10px; align-content: start; border-left: 4px solid var(--card-accent, var(--primary)) !important; }
+.triage-card.good { --card-accent: #22c55e; }
+.triage-card.warn { --card-accent: #f59e0b; }
+.triage-card.bad { --card-accent: #ff5d73; }
+.triage-card h2, .mini-compare-card h2 { margin: 0; font-size: 1.35rem; }
+.triage-card p, .mini-compare-card p { margin: 0; line-height: 1.5; }
+.triage-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
 .health-panel { padding: 22px !important; display: grid !important; justify-items: start; gap: 12px; }
 .expanded-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 22px; }
 .tip-line { margin-bottom: 8px; padding-left: 12px; border-left: 2px solid var(--primary); }
@@ -259,6 +267,10 @@ code { display: block; padding: 12px; border-radius: 8px; background: var(--surf
 .metric-badge.risk.clear { color: #22c55e; background: color-mix(in srgb, #22c55e 10%, transparent); }
 .metric-badge.risk.high.warn { color: #fb923c; background: color-mix(in srgb, #f97316 18%, transparent); }
 .metric-badge.risk.critical.bad { color: #ff5d73; background: color-mix(in srgb, #ef4444 20%, transparent); }
+.metric-badge.update { color: var(--primary); background: color-mix(in srgb, var(--primary) 10%, transparent); }
+.metric-badge.update.major { color: #fb923c; background: color-mix(in srgb, #f97316 16%, transparent); }
+.metric-badge.update.minor { color: #62a7ff; background: color-mix(in srgb, #62a7ff 14%, transparent); }
+.metric-badge.update.patch { color: #22c55e; background: color-mix(in srgb, #22c55e 12%, transparent); }
 .status-badge { min-width: 92px; text-transform: capitalize; }
 .status-badge.completed { color: #22c55e; background: color-mix(in srgb, #22c55e 13%, transparent); }
 .status-badge.failed { color: #ff5d73; background: color-mix(in srgb, #ef4444 18%, transparent); }
@@ -317,6 +329,14 @@ code { display: block; padding: 12px; border-radius: 8px; background: var(--surf
 .mat-expansion-panel.risk-panel.critical { border-color: color-mix(in srgb, #ef4444 45%, var(--line)); background: color-mix(in srgb, #ef4444 8%, var(--surface)) !important; }
 .mat-expansion-panel.risk-panel.medium { border-color: color-mix(in srgb, #f59e0b 34%, var(--line)); }
 .mat-expansion-panel-header-title, .mat-expansion-panel-header-description { color: var(--text) !important; }
+.mat-expansion-panel-header-description { justify-content: flex-end; align-items: center; gap: 10px; }
+.package-row-title { display: grid; gap: 4px; min-width: 0; }
+.package-row-title small, .version-inline { color: var(--muted); font-size: .78rem; }
+.version-inline { white-space: nowrap; }
+.report-tools { display: grid; grid-template-columns: minmax(220px, 1.4fr) repeat(3, minmax(150px, .8fr)); gap: 12px; margin-bottom: 12px; }
+.report-tools mat-form-field { margin-bottom: -18px; }
+.batch-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 4px 0 16px; }
+.batch-actions button { color: var(--primary) !important; border-color: color-mix(in srgb, var(--primary) 28%, var(--line)) !important; }
 .version-strip { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .version-strip span { display: grid; gap: 4px; min-width: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); }
 .version-strip small { font-size: .68rem; text-transform: uppercase; font-weight: 900; }
@@ -346,6 +366,7 @@ code { display: block; padding: 12px; border-radius: 8px; background: var(--surf
 
 @media (max-width: 1180px) {
   .hero, .scan-layout, .report-summary { grid-template-columns: 1fr; }
+  .report-action-grid, .report-tools { grid-template-columns: 1fr; }
   .feature-grid, .stats-grid, .dashboard-grid { grid-template-columns: repeat(2, 1fr); }
 }
 

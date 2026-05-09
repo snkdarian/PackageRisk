@@ -1,14 +1,16 @@
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ChartConfiguration } from 'chart.js';
 import { BaseChartDirective } from 'ng2-charts';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { MatTableModule } from '@angular/material/table';
-import { DependencyScanItem } from '../../core/models';
+import { DependencyScanItem, RiskLevel, UpdateType } from '../../core/models';
 import { ScanService } from '../../core/scan.service';
 import { HealthScoreComponent } from '../../shared/health-score.component';
 import { RiskBadgeComponent } from '../../shared/risk-badge.component';
@@ -17,7 +19,7 @@ import { I18nService } from '../../core/i18n.service';
 
 @Component({
   selector: 'app-report-page',
-  imports: [DatePipe, BaseChartDirective, MatButtonModule, MatCardModule, MatExpansionModule, MatIconModule, MatTableModule, HealthScoreComponent, RiskBadgeComponent, StatCardComponent],
+  imports: [DatePipe, RouterLink, BaseChartDirective, MatButtonModule, MatCardModule, MatExpansionModule, MatIconModule, MatInputModule, MatSelectModule, MatTableModule, HealthScoreComponent, RiskBadgeComponent, StatCardComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (report()) {
@@ -28,6 +30,26 @@ import { I18nService } from '../../core/i18n.service';
           <p>{{ report()!.project.name }} - {{ report()!.scan.createdAt | date:'medium' }}</p>
         </div>
         <button mat-flat-button class="primary-action compact"><mat-icon>download</mat-icon>{{ i18n.t('report.export') }}</button>
+      </section>
+      <section class="report-action-grid">
+        <mat-card [class]="'triage-card ' + triageTone()">
+          <span class="section-kicker">{{ i18n.t('report.triage') }}</span>
+          <h2>{{ triageTitle() }}</h2>
+          <p>{{ triageText() }}</p>
+          <div class="triage-pills">
+            <span class="metric-badge risk critical bad">{{ fixNowItems().length }} {{ i18n.t('report.fixNow') }}</span>
+            <span class="metric-badge risk high warn">{{ planItems().length }} {{ i18n.t('report.planThisSprint') }}</span>
+            <span class="metric-badge risk clear">{{ monitorItems().length }} {{ i18n.t('report.monitor') }}</span>
+          </div>
+        </mat-card>
+        @if (previousComparison()) {
+          <mat-card class="mini-compare-card">
+            <span class="section-kicker">{{ i18n.t('report.previousScan') }}</span>
+            <h2>{{ signed(previousComparison()!.healthDelta) }} {{ i18n.t('compare.points') }}</h2>
+            <p>{{ previousComparison()!.newRisks.length }} {{ i18n.t('compare.newRisks') }} / {{ previousComparison()!.fixedRisks.length }} {{ i18n.t('compare.fixedRisks') }}</p>
+            <a mat-flat-button class="mini-action" [routerLink]="['/reports/compare', previousComparison()!.previousScan.id, previousComparison()!.currentScan.id]"><mat-icon>compare_arrows</mat-icon>{{ i18n.t('history.compare') }}</a>
+          </mat-card>
+        }
       </section>
       <section class="report-summary">
         <mat-card class="health-panel">
@@ -46,13 +68,23 @@ import { I18nService } from '../../core/i18n.service';
         <mat-card class="chart-card"><div class="card-head"><h2>{{ i18n.t('report.dependencyTypes') }}</h2><span>{{ i18n.t('report.scope') }}</span></div><canvas baseChart [data]="dependencyTypeData()" [options]="barOptions" type="bar"></canvas></mat-card>
       </section>
       <mat-card class="table-card">
-        <div class="card-head"><h2>{{ i18n.t('table.dependencies') }}</h2><span>{{ report()!.items.length }} {{ i18n.t('report.packages') }}</span></div>
+        <div class="card-head"><h2>{{ i18n.t('table.dependencies') }}</h2><span>{{ filteredItems().length }} / {{ report()!.items.length }} {{ i18n.t('report.packages') }}</span></div>
+        <div class="report-tools">
+          <mat-form-field appearance="outline"><mat-label>{{ i18n.t('report.searchPackage') }}</mat-label><input matInput [value]="search()" (input)="search.set($any($event.target).value)" /></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>{{ i18n.t('report.riskFilter') }}</mat-label><mat-select [value]="riskFilter()" (selectionChange)="riskFilter.set($event.value)"><mat-option value="all">{{ i18n.t('dashboard.range.all') }}</mat-option><mat-option value="critical">{{ i18n.t('risk.critical') }}</mat-option><mat-option value="high">{{ i18n.t('risk.high') }}</mat-option><mat-option value="medium">{{ i18n.t('risk.medium') }}</mat-option><mat-option value="low">{{ i18n.t('risk.low') }}</mat-option><mat-option value="none">{{ i18n.t('risk.none') }}</mat-option></mat-select></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>{{ i18n.t('report.updateFilter') }}</mat-label><mat-select [value]="updateFilter()" (selectionChange)="updateFilter.set($event.value)"><mat-option value="all">{{ i18n.t('dashboard.range.all') }}</mat-option><mat-option value="major">{{ i18n.t('update.major') }}</mat-option><mat-option value="minor">{{ i18n.t('update.minor') }}</mat-option><mat-option value="patch">{{ i18n.t('update.patch') }}</mat-option><mat-option value="none">{{ i18n.t('risk.none') }}</mat-option></mat-select></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>{{ i18n.t('report.sortBy') }}</mat-label><mat-select [value]="sortBy()" (selectionChange)="sortBy.set($event.value)"><mat-option value="risk">{{ i18n.t('report.sort.risk') }}</mat-option><mat-option value="name">{{ i18n.t('report.sort.name') }}</mat-option><mat-option value="update">{{ i18n.t('report.sort.update') }}</mat-option></mat-select></mat-form-field>
+        </div>
+        <div class="batch-actions">
+          <button mat-stroked-button type="button" (click)="copyBatch(safePatchItems())"><mat-icon>content_copy</mat-icon>{{ i18n.t('report.copySafePatches') }}</button>
+          <button mat-stroked-button type="button" (click)="copyBatch(fixNowItems())"><mat-icon>content_copy</mat-icon>{{ i18n.t('report.copyHighRisk') }}</button>
+        </div>
         <mat-accordion>
-          @for (item of report()!.items; track item.id) {
+          @for (item of filteredItems(); track item.id) {
             <mat-expansion-panel [class]="'risk-panel ' + item.riskLevel">
               <mat-expansion-panel-header>
-                <mat-panel-title>{{ item.packageName }} <small>{{ item.currentVersion }} -> {{ item.latestVersion }}</small></mat-panel-title>
-                <mat-panel-description><app-risk-badge [level]="item.riskLevel" /></mat-panel-description>
+                <mat-panel-title><span class="package-row-title">{{ item.packageName }} <small>{{ localizedRiskReason(item) }}</small></span></mat-panel-title>
+                <mat-panel-description><span class="version-inline">{{ item.currentVersion }} -> {{ item.latestVersion }}</span><app-risk-badge [level]="item.riskLevel" /><span [class]="'metric-badge update ' + item.updateType">{{ i18n.t('update.' + item.updateType) }}</span></mat-panel-description>
               </mat-expansion-panel-header>
               <div class="expanded-grid">
                 <div><h3>{{ i18n.t('report.whyRisk') }}</h3><p>{{ localizedRiskReason(item) }}</p><p>{{ localizedExplanation(item) }}</p><p class="prediction-line">{{ prediction(item) }}</p></div>
@@ -100,6 +132,8 @@ import { I18nService } from '../../core/i18n.service';
                 </div>
               </div>
             </mat-expansion-panel>
+          } @empty {
+            <div class="empty-state inline-empty"><mat-icon>filter_alt_off</mat-icon><h2>{{ i18n.t('report.noFilteredPackages') }}</h2><p>{{ i18n.t('report.noFilteredPackagesText') }}</p></div>
           }
         </mat-accordion>
       </mat-card>
@@ -112,6 +146,28 @@ export class ReportPage {
   readonly i18n = inject(I18nService);
   private readonly id = signal(this.route.snapshot.paramMap.get('scanId') ?? '');
   readonly report = computed(() => this.scans.getReport(this.id()));
+  readonly search = signal('');
+  readonly riskFilter = signal<RiskLevel | 'all'>('all');
+  readonly updateFilter = signal<UpdateType | 'all'>('all');
+  readonly sortBy = signal<'risk' | 'name' | 'update'>('risk');
+  readonly previousComparison = computed(() => {
+    const scan = this.report()?.scan;
+    if (!scan) return null;
+    const previousId = this.scans.getPreviousScanId(scan);
+    return previousId ? this.scans.compareScans(previousId, scan.id) : null;
+  });
+  readonly filteredItems = computed(() => {
+    const term = this.search().trim().toLowerCase();
+    return [...(this.report()?.items ?? [])]
+      .filter((item) => !term || item.packageName.toLowerCase().includes(term))
+      .filter((item) => this.riskFilter() === 'all' || item.riskLevel === this.riskFilter())
+      .filter((item) => this.updateFilter() === 'all' || item.updateType === this.updateFilter())
+      .sort((a, b) => this.sortBy() === 'name' ? a.packageName.localeCompare(b.packageName) : this.sortBy() === 'update' ? updateRank(b.updateType) - updateRank(a.updateType) : b.riskScore - a.riskScore);
+  });
+  readonly fixNowItems = computed(() => (this.report()?.items ?? []).filter((item) => item.riskLevel === 'critical' || item.riskLevel === 'high' || item.isVulnerable));
+  readonly planItems = computed(() => (this.report()?.items ?? []).filter((item) => item.updateType === 'major' || item.riskLevel === 'medium'));
+  readonly monitorItems = computed(() => (this.report()?.items ?? []).filter((item) => item.riskLevel === 'low' || item.riskLevel === 'none'));
+  readonly safePatchItems = computed(() => (this.report()?.items ?? []).filter((item) => item.updateType === 'patch' && !item.isVulnerable && item.riskLevel !== 'critical' && item.riskLevel !== 'high'));
   readonly chartText = '#9cadc8';
   readonly gridColor = 'rgba(148, 163, 184, .16)';
   readonly label = computed(() => {
@@ -243,5 +299,25 @@ export class ReportPage {
     ].slice(0, 8);
   }
   healthTone(score: number) { return score >= 75 ? 'good' : score >= 50 ? 'warn' : 'bad'; }
+  triageTone() { return this.fixNowItems().length ? 'bad' : this.planItems().length ? 'warn' : 'good'; }
+  triageTitle() {
+    if (this.fixNowItems().length) return this.i18n.t('report.triageFixNow');
+    if (this.planItems().length) return this.i18n.t('report.triagePlan');
+    return this.i18n.t('report.triageHealthy');
+  }
+  triageText() {
+    if (this.fixNowItems().length) return this.i18n.t('report.triageFixNowText');
+    if (this.planItems().length) return this.i18n.t('report.triagePlanText');
+    return this.i18n.t('report.triageHealthyText');
+  }
+  signed(value: number) { return value > 0 ? `+${value}` : String(value); }
   copy(command: string) { navigator.clipboard?.writeText(command); }
+  copyBatch(items: DependencyScanItem[]) {
+    const commands = [...new Set(items.map((item) => item.updateCommand).filter(Boolean))];
+    if (commands.length) this.copy(commands.join('\n'));
+  }
+}
+
+function updateRank(type: UpdateType) {
+  return type === 'major' ? 4 : type === 'minor' ? 3 : type === 'patch' ? 2 : type === 'none' ? 1 : 0;
 }
