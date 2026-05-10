@@ -9,7 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
   template: `
     <mat-card [class]="'stat-card ' + tone()">
       <div class="icon"><mat-icon>{{ icon() }}</mat-icon></div>
-      <div>
+      <div class="stat-body">
         <p>{{ label() }}</p>
         <strong>{{ value() }}</strong>
         <small>{{ trend() }}</small>
