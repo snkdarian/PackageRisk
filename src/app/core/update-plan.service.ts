@@ -22,7 +22,6 @@ export class UpdatePlanService {
       .from('update_plans')
       .select('*')
       .eq('scan_id', scanId)
-      .eq('status', 'draft')
       .maybeSingle();
     if (error) throw error;
     return data ? mapUpdatePlan(data) : null;
@@ -35,13 +34,27 @@ export class UpdatePlanService {
     const userId = userData.user?.id;
     if (!userId) throw new Error('No authenticated user found.');
 
-    const { data, error } = await this.supabase.client
+    return this.upsertPlan(userId, input, 'draft');
+  }
+
+  async markApplied(input: SaveUpdatePlanInput) {
+    if (!this.supabase.client) return null;
+    const { data: userData, error: userError } = await this.supabase.client.auth.getUser();
+    if (userError) throw userError;
+    const userId = userData.user?.id;
+    if (!userId) throw new Error('No authenticated user found.');
+
+    return this.upsertPlan(userId, input, 'applied');
+  }
+
+  private async upsertPlan(userId: string, input: SaveUpdatePlanInput, status: UpdatePlan['status']) {
+    const { data, error } = await this.supabase.client!
       .from('update_plans')
       .upsert({
         user_id: userId,
         project_id: input.projectId,
         scan_id: input.scanId,
-        status: 'draft',
+        status,
         selected_item_ids: input.selectedItemIds,
         package_json: input.packageJson,
         summary: input.summary,

@@ -118,6 +118,7 @@ import { I18nService } from '../../core/i18n.service';
                   <button mat-stroked-button type="button" (click)="selectRecommendedUpdates()"><mat-icon>playlist_add_check</mat-icon>{{ i18n.t('report.selectRecommended') }}</button>
                   <button mat-stroked-button type="button" (click)="clearUpdateSelection()"><mat-icon>remove_done</mat-icon>{{ i18n.t('report.clearSelection') }}</button>
                   <button mat-stroked-button type="button" [disabled]="updatePlanSaving()" (click)="saveUpdatePlan()"><mat-icon>save</mat-icon>{{ updatePlanSaving() ? i18n.t('report.savingPlan') : i18n.t('report.savePlan') }}</button>
+                  <button mat-stroked-button type="button" [disabled]="updatePlanApplying() || !selectedUpdateItems().length" (click)="markUpdatePlanApplied()"><mat-icon>task_alt</mat-icon>{{ updatePlanApplying() ? i18n.t('report.applyingPlan') : i18n.t('report.markPlanApplied') }}</button>
                   @if (hasSavedUpdatePlan()) {
                     <button mat-stroked-button type="button" (click)="restoreUpdatePlan()"><mat-icon>restore</mat-icon>{{ i18n.t('report.restorePlan') }}</button>
                   }
@@ -137,6 +138,16 @@ import { I18nService } from '../../core/i18n.service';
                     <span><strong>{{ selectedRiskyUpdates() }}</strong>{{ i18n.t('report.highRiskShort') }}</span>
                   </div>
                 </div>
+                @if (updatePlanApplied()) {
+                  <div class="planner-complete-card">
+                    <div>
+                      <span class="section-kicker">{{ i18n.t('report.planApplied') }}</span>
+                      <strong>{{ i18n.t('report.planAppliedTitle') }}</strong>
+                      <p>{{ i18n.t('report.planAppliedText') }}</p>
+                    </div>
+                    <a mat-flat-button class="primary-action compact" routerLink="/scan/new"><mat-icon>radar</mat-icon>{{ i18n.t('report.runRescan') }}</a>
+                  </div>
+                }
                 <div class="planner-list">
                   @if (updatableItems().length) {
                     <div class="planner-header">
@@ -346,6 +357,8 @@ export class ReportPage {
   readonly selectedUpdateIds = signal<string[]>([]);
   readonly savedUpdatePlanIds = signal<string[]>([]);
   readonly updatePlanSaving = signal(false);
+  readonly updatePlanApplying = signal(false);
+  readonly updatePlanApplied = signal(false);
   readonly updatePlanStatus = signal('');
   private readonly selectionInitializedFor = signal('');
   readonly search = signal('');
@@ -428,6 +441,7 @@ export class ReportPage {
       const saved = loadUpdatePlan(scanId);
       this.savedUpdatePlanIds.set(saved);
       this.selectedUpdateIds.set(saved.length ? saved : this.recommendedUpdateItems().map((item) => item.id));
+      this.updatePlanApplied.set(loadAppliedUpdatePlan(scanId));
       this.selectionInitializedFor.set(scanId);
       void this.loadSavedUpdatePlan(scanId);
     });
@@ -587,7 +601,8 @@ export class ReportPage {
       const ids = plan.selectedItemIds.filter((id) => available.has(id));
       this.savedUpdatePlanIds.set(ids);
       this.selectedUpdateIds.set(ids);
-      this.updatePlanStatus.set(this.i18n.t('report.planLoaded'));
+      this.updatePlanApplied.set(plan.status === 'applied');
+      this.updatePlanStatus.set(plan.status === 'applied' ? this.i18n.t('report.planAppliedStatus') : this.i18n.t('report.planLoaded'));
     } catch {
       this.updatePlanStatus.set(this.i18n.t('report.planLoadFailed'));
     }
@@ -608,12 +623,42 @@ export class ReportPage {
         summary: this.updatePlanSummaryPayload(),
       });
       this.savedUpdatePlanIds.set(ids);
+      this.updatePlanApplied.set(false);
+      localStorage.removeItem(appliedUpdatePlanStorageKey(report.scan.id));
       this.updatePlanStatus.set(this.updatePlans.hasRealBackend() ? this.i18n.t('report.planSaved') : this.i18n.t('report.planSavedLocal'));
     } catch {
       this.savedUpdatePlanIds.set(ids);
       this.updatePlanStatus.set(this.i18n.t('report.planSavedLocal'));
     } finally {
       this.updatePlanSaving.set(false);
+    }
+  }
+  async markUpdatePlanApplied() {
+    const report = this.report();
+    if (!report || !this.selectedUpdateItems().length) return;
+    const ids = this.selectedUpdateIds();
+    this.updatePlanApplying.set(true);
+    this.updatePlanStatus.set('');
+    localStorage.setItem(updatePlanStorageKey(report.scan.id), JSON.stringify(ids));
+    try {
+      await this.updatePlans.markApplied({
+        projectId: report.project.id,
+        scanId: report.scan.id,
+        selectedItemIds: ids,
+        packageJson: this.updatedPackageJson(),
+        summary: this.updatePlanSummaryPayload(),
+      });
+      this.savedUpdatePlanIds.set(ids);
+      this.updatePlanApplied.set(true);
+      localStorage.setItem(appliedUpdatePlanStorageKey(report.scan.id), 'true');
+      this.updatePlanStatus.set(this.updatePlans.hasRealBackend() ? this.i18n.t('report.planAppliedStatus') : this.i18n.t('report.planAppliedLocal'));
+    } catch {
+      this.savedUpdatePlanIds.set(ids);
+      this.updatePlanApplied.set(true);
+      localStorage.setItem(appliedUpdatePlanStorageKey(report.scan.id), 'true');
+      this.updatePlanStatus.set(this.i18n.t('report.planAppliedLocal'));
+    } finally {
+      this.updatePlanApplying.set(false);
     }
   }
   restoreUpdatePlan() {
@@ -709,6 +754,10 @@ function updatePlanStorageKey(scanId: string) {
   return `package-risk-update-plan:${scanId}`;
 }
 
+function appliedUpdatePlanStorageKey(scanId: string) {
+  return `package-risk-update-plan-applied:${scanId}`;
+}
+
 function loadUpdatePlan(scanId: string) {
   try {
     const value = localStorage.getItem(updatePlanStorageKey(scanId));
@@ -717,4 +766,8 @@ function loadUpdatePlan(scanId: string) {
   } catch {
     return [];
   }
+}
+
+function loadAppliedUpdatePlan(scanId: string) {
+  return localStorage.getItem(appliedUpdatePlanStorageKey(scanId)) === 'true';
 }
