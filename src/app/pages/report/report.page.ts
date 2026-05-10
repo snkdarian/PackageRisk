@@ -14,6 +14,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatTableModule } from '@angular/material/table';
 import { DependencyScanItem, RiskLevel, UpdateType } from '../../core/models';
 import { ScanService } from '../../core/scan.service';
+import { UpdatePlanService } from '../../core/update-plan.service';
 import { HealthScoreComponent } from '../../shared/health-score.component';
 import { RiskBadgeComponent } from '../../shared/risk-badge.component';
 import { StatCardComponent } from '../../shared/stat-card.component';
@@ -116,9 +117,12 @@ import { I18nService } from '../../core/i18n.service';
                 <div class="planner-actions">
                   <button mat-stroked-button type="button" (click)="selectRecommendedUpdates()"><mat-icon>playlist_add_check</mat-icon>{{ i18n.t('report.selectRecommended') }}</button>
                   <button mat-stroked-button type="button" (click)="clearUpdateSelection()"><mat-icon>remove_done</mat-icon>{{ i18n.t('report.clearSelection') }}</button>
-                  <button mat-stroked-button type="button" (click)="saveUpdatePlan()"><mat-icon>save</mat-icon>{{ i18n.t('report.savePlan') }}</button>
+                  <button mat-stroked-button type="button" [disabled]="updatePlanSaving()" (click)="saveUpdatePlan()"><mat-icon>save</mat-icon>{{ updatePlanSaving() ? i18n.t('report.savingPlan') : i18n.t('report.savePlan') }}</button>
                   @if (hasSavedUpdatePlan()) {
                     <button mat-stroked-button type="button" (click)="restoreUpdatePlan()"><mat-icon>restore</mat-icon>{{ i18n.t('report.restorePlan') }}</button>
+                  }
+                  @if (updatePlanStatus()) {
+                    <span class="planner-save-status">{{ updatePlanStatus() }}</span>
                   }
                 </div>
                 <div [class]="'planner-summary ' + selectedUpdateTone()">
@@ -335,11 +339,14 @@ import { I18nService } from '../../core/i18n.service';
 export class ReportPage {
   private readonly route = inject(ActivatedRoute);
   private readonly scans = inject(ScanService);
+  private readonly updatePlans = inject(UpdatePlanService);
   readonly i18n = inject(I18nService);
   private readonly id = signal(this.route.snapshot.paramMap.get('scanId') ?? '');
   readonly report = computed(() => this.scans.getReport(this.id()));
   readonly selectedUpdateIds = signal<string[]>([]);
   readonly savedUpdatePlanIds = signal<string[]>([]);
+  readonly updatePlanSaving = signal(false);
+  readonly updatePlanStatus = signal('');
   private readonly selectionInitializedFor = signal('');
   readonly search = signal('');
   readonly riskFilter = signal<RiskLevel | 'all'>('all');
@@ -422,6 +429,7 @@ export class ReportPage {
       this.savedUpdatePlanIds.set(saved);
       this.selectedUpdateIds.set(saved.length ? saved : this.recommendedUpdateItems().map((item) => item.id));
       this.selectionInitializedFor.set(scanId);
+      void this.loadSavedUpdatePlan(scanId);
     });
   }
   riskData(): ChartConfiguration<'doughnut'>['data'] {
@@ -571,16 +579,57 @@ export class ReportPage {
   }
   selectRecommendedUpdates() { this.selectedUpdateIds.set(this.recommendedUpdateItems().map((item) => item.id)); }
   clearUpdateSelection() { this.selectedUpdateIds.set([]); }
-  saveUpdatePlan() {
-    const scanId = this.report()?.scan.id;
-    if (!scanId) return;
+  async loadSavedUpdatePlan(scanId: string) {
+    try {
+      const plan = await this.updatePlans.getPlanForScan(scanId);
+      if (!plan) return;
+      const available = new Set(this.updatableItems().map((item) => item.id));
+      const ids = plan.selectedItemIds.filter((id) => available.has(id));
+      this.savedUpdatePlanIds.set(ids);
+      this.selectedUpdateIds.set(ids);
+      this.updatePlanStatus.set(this.i18n.t('report.planLoaded'));
+    } catch {
+      this.updatePlanStatus.set(this.i18n.t('report.planLoadFailed'));
+    }
+  }
+  async saveUpdatePlan() {
+    const report = this.report();
+    if (!report) return;
     const ids = this.selectedUpdateIds();
-    localStorage.setItem(updatePlanStorageKey(scanId), JSON.stringify(ids));
-    this.savedUpdatePlanIds.set(ids);
+    this.updatePlanSaving.set(true);
+    this.updatePlanStatus.set('');
+    localStorage.setItem(updatePlanStorageKey(report.scan.id), JSON.stringify(ids));
+    try {
+      await this.updatePlans.saveDraft({
+        projectId: report.project.id,
+        scanId: report.scan.id,
+        selectedItemIds: ids,
+        packageJson: this.updatedPackageJson(),
+        summary: this.updatePlanSummaryPayload(),
+      });
+      this.savedUpdatePlanIds.set(ids);
+      this.updatePlanStatus.set(this.updatePlans.hasRealBackend() ? this.i18n.t('report.planSaved') : this.i18n.t('report.planSavedLocal'));
+    } catch {
+      this.savedUpdatePlanIds.set(ids);
+      this.updatePlanStatus.set(this.i18n.t('report.planSavedLocal'));
+    } finally {
+      this.updatePlanSaving.set(false);
+    }
   }
   restoreUpdatePlan() {
     const saved = new Set(this.savedUpdatePlanIds());
     this.selectedUpdateIds.set(this.updatableItems().filter((item) => saved.has(item.id)).map((item) => item.id));
+  }
+  updatePlanSummaryPayload() {
+    return {
+      selectedCount: this.selectedUpdateItems().length,
+      majorCount: this.selectedMajorUpdates(),
+      riskyCount: this.selectedRiskyUpdates(),
+      patchMinorCount: this.selectedPatchMinorUpdates(),
+      prodCount: this.selectedProdUpdates().length,
+      devCount: this.selectedDevUpdates().length,
+      generatedAt: new Date().toISOString(),
+    };
   }
   plannedRange(item: DependencyScanItem) { return preserveRangePrefix(item.currentRange, item.latestVersion); }
   packageJsonStatus() {

@@ -94,6 +94,19 @@ export interface ScanReport {
   items: DependencyScanItem[];
 }
 
+export interface UpdatePlan {
+  id: string;
+  projectId: string;
+  scanId: string;
+  userId: string;
+  status: 'draft' | 'applied' | 'abandoned';
+  selectedItemIds: string[];
+  packageJson?: Record<string, unknown>;
+  summary?: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ScanComparison {
   previousScan: DependencyScan;
   currentScan: DependencyScan;
