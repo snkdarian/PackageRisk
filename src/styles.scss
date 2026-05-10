@@ -238,10 +238,13 @@ textarea { font-family: 'Cascadia Code', Consolas, monospace !important; }
 .scan-submit { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 .report-summary { display: grid; grid-template-columns: 1.5fr repeat(4, 1fr); align-items: start; gap: 16px; }
 .report-tabs { display: block; }
-.report-tabs .mat-mdc-tab-header { margin-bottom: 18px; border: 1px solid var(--line); border-radius: 8px; background: color-mix(in srgb, var(--surface) 92%, transparent); }
+.report-tabs .mat-mdc-tab-header { margin-bottom: 18px; padding: 6px; border: 1px solid var(--line); border-radius: 8px; background: color-mix(in srgb, var(--surface) 92%, transparent); }
 .report-tabs .mat-mdc-tab-label-container { border-bottom: 0; }
-.report-tabs .mdc-tab { min-width: 120px; color: var(--muted); font-weight: 900; }
-.report-tabs .mdc-tab--active { color: var(--primary); }
+.report-tabs .mat-mdc-tab-list { gap: 6px; }
+.report-tabs .mdc-tab { min-width: 120px; height: 42px; color: var(--muted); border: 1px solid transparent; border-radius: 8px; font-weight: 900; transition: background .16s ease, border-color .16s ease, color .16s ease; }
+.report-tabs .mdc-tab:hover { color: var(--text); border-color: color-mix(in srgb, var(--primary) 22%, var(--line)); background: color-mix(in srgb, var(--primary) 8%, transparent); }
+.report-tabs .mdc-tab--active { color: var(--primary); border-color: color-mix(in srgb, var(--primary) 44%, var(--line)); background: color-mix(in srgb, var(--primary) 14%, var(--surface-2)); }
+.report-tabs .mdc-tab-indicator__content--underline { border-color: var(--accent) !important; border-top-width: 3px; border-radius: 999px; }
 .report-tabs .mat-mdc-tab-body-content { overflow: visible; }
 .tab-panel { padding-top: 2px; }
 .report-action-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(260px, .6fr); gap: 16px; margin-bottom: 18px; }
