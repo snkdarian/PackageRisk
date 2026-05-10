@@ -283,6 +283,19 @@ textarea { font-family: 'Cascadia Code', Consolas, monospace !important; }
 .planner-item > span { color: var(--muted); font-weight: 900; }
 .planner-badges { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
 .planner-preview code { max-height: 520px; white-space: pre; }
+.planner-secondary { margin-top: 18px; }
+.diff-section + .diff-section { margin-top: 18px; }
+.diff-section h3 { margin-bottom: 10px; }
+.diff-line { display: grid; grid-template-columns: minmax(120px, .7fr) minmax(180px, 1fr) auto; align-items: center; gap: 12px; margin: 0 0 10px; padding: 10px 12px; border: 1px solid currentColor; border-radius: 8px; background: color-mix(in srgb, currentColor 8%, transparent); }
+.diff-line.severe { color: #ff5d73; }
+.diff-line.moderate { color: #f59e0b; }
+.diff-line.soft { color: #22c55e; }
+.diff-line.neutral { color: #94a3b8; }
+.diff-line strong, .diff-line span { color: var(--text); }
+.diff-line em { color: currentColor; font-style: normal; font-weight: 900; font-size: .78rem; text-transform: uppercase; }
+.muted-line { margin: 0; color: var(--muted); }
+.command-list { display: grid; gap: 16px; }
+.command-list code { margin-bottom: 8px; white-space: pre-wrap; }
 .health-panel { min-height: 168px; padding: 22px !important; display: grid !important; grid-template-columns: 1fr auto; align-items: center; gap: 14px; }
 .health-panel h2 { margin: 0; max-width: 12ch; line-height: 1.15; }
 .expanded-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 22px; }
@@ -416,6 +429,7 @@ code { display: block; padding: 12px; border-radius: 8px; background: var(--surf
   .planner-grid { grid-template-columns: 1fr; }
   .planner-item { grid-template-columns: 1fr; align-items: start; }
   .planner-badges { justify-content: flex-start; }
+  .diff-line { grid-template-columns: 1fr; }
   .mat-expansion-panel-header { align-items: flex-start; height: auto !important; padding-top: 14px !important; padding-bottom: 14px !important; }
   .mat-expansion-panel-header-description { flex-wrap: wrap; justify-content: flex-start; margin-left: 0; }
   .feature-grid, .stats-grid, .dashboard-grid { grid-template-columns: repeat(2, 1fr); }

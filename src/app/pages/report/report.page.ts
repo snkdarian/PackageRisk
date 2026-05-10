@@ -146,6 +146,41 @@ import { I18nService } from '../../core/i18n.service';
                 <code>{{ updatedPackageJsonText() }}</code>
               </mat-card>
             </section>
+            <section class="planner-grid planner-secondary">
+              <mat-card class="table-card">
+                <div class="card-head"><h2>{{ i18n.t('report.updateDiff') }}</h2><span>{{ packageCountLabel(selectedUpdateItems().length) }}</span></div>
+                <div class="diff-section">
+                  <h3>{{ i18n.t('report.production') }}</h3>
+                  @for (item of selectedProdUpdates(); track item.id) {
+                    <p [class]="'diff-line ' + updateImpactClass(item)"><strong>{{ item.packageName }}</strong><span>{{ item.currentRange }} -> {{ plannedRange(item) }}</span>@if (item.updateType === 'major') { <em>{{ i18n.t('report.manualTesting') }}</em> }</p>
+                  } @empty {
+                    <p class="muted-line">{{ i18n.t('report.noProductionUpdates') }}</p>
+                  }
+                </div>
+                <div class="diff-section">
+                  <h3>{{ i18n.t('report.development') }}</h3>
+                  @for (item of selectedDevUpdates(); track item.id) {
+                    <p [class]="'diff-line ' + updateImpactClass(item)"><strong>{{ item.packageName }}</strong><span>{{ item.currentRange }} -> {{ plannedRange(item) }}</span>@if (item.updateType === 'major') { <em>{{ i18n.t('report.manualTesting') }}</em> }</p>
+                  } @empty {
+                    <p class="muted-line">{{ i18n.t('report.noDevelopmentUpdates') }}</p>
+                  }
+                </div>
+              </mat-card>
+              <mat-card class="table-card">
+                <div class="card-head"><h2>{{ i18n.t('report.installCommands') }}</h2><span>{{ report()!.project.packageManager }}</span></div>
+                <div class="command-list">
+                  @if (prodInstallCommand()) {
+                    <div><span class="section-kicker">{{ i18n.t('report.production') }}</span><code>{{ prodInstallCommand() }}</code><button mat-button type="button" (click)="copy(prodInstallCommand())">{{ i18n.t('common.copy') }}</button></div>
+                  }
+                  @if (devInstallCommand()) {
+                    <div><span class="section-kicker">{{ i18n.t('report.development') }}</span><code>{{ devInstallCommand() }}</code><button mat-button type="button" (click)="copy(devInstallCommand())">{{ i18n.t('common.copy') }}</button></div>
+                  }
+                  @if (!prodInstallCommand() && !devInstallCommand()) {
+                    <div class="empty-state inline-empty"><mat-icon>terminal</mat-icon><h2>{{ i18n.t('report.noCommands') }}</h2><p>{{ i18n.t('report.noCommandsText') }}</p></div>
+                  }
+                </div>
+              </mat-card>
+            </section>
           </section>
         </mat-tab>
         <mat-tab [label]="i18n.t('report.tabPackages')">
@@ -322,6 +357,10 @@ export class ReportPage {
   });
   readonly updatedPackageJson = computed(() => buildUpdatedPackageJson(this.report()?.project.packageJson, this.report()?.items ?? [], this.selectedUpdateItems()));
   readonly updatedPackageJsonText = computed(() => JSON.stringify(this.updatedPackageJson(), null, 2));
+  readonly selectedProdUpdates = computed(() => this.selectedUpdateItems().filter((item) => item.dependencyType === 'dependency'));
+  readonly selectedDevUpdates = computed(() => this.selectedUpdateItems().filter((item) => item.dependencyType === 'devDependency'));
+  readonly prodInstallCommand = computed(() => buildInstallCommand(this.report()?.project.packageManager ?? 'npm', this.selectedProdUpdates(), false));
+  readonly devInstallCommand = computed(() => buildInstallCommand(this.report()?.project.packageManager ?? 'npm', this.selectedDevUpdates(), true));
   readonly chartText = '#9cadc8';
   readonly gridColor = 'rgba(148, 163, 184, .16)';
   readonly label = computed(() => {
@@ -540,4 +579,12 @@ function buildPackageJsonFromItems(items: DependencyScanItem[]) {
 function preserveRangePrefix(currentRange: string, latestVersion: string) {
   const prefix = currentRange.match(/^(\^|~|>=|>|<=|<|=)/)?.[0] ?? '';
   return `${prefix}${latestVersion}`;
+}
+
+function buildInstallCommand(manager: string, items: DependencyScanItem[], dev: boolean) {
+  if (!items.length) return '';
+  const packages = items.map((item) => `${item.packageName}@${item.latestVersion}`).join(' ');
+  if (manager === 'yarn') return `yarn add ${dev ? '-D ' : ''}${packages}`;
+  if (manager === 'pnpm') return `pnpm add ${dev ? '-D ' : ''}${packages}`;
+  return `npm install ${dev ? '-D ' : ''}${packages}`;
 }
