@@ -9,6 +9,7 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { MatTabsModule } from '@angular/material/tabs';
 import { MatTableModule } from '@angular/material/table';
 import { DependencyScanItem, RiskLevel, UpdateType } from '../../core/models';
 import { ScanService } from '../../core/scan.service';
@@ -19,7 +20,7 @@ import { I18nService } from '../../core/i18n.service';
 
 @Component({
   selector: 'app-report-page',
-  imports: [DatePipe, RouterLink, BaseChartDirective, MatButtonModule, MatCardModule, MatExpansionModule, MatIconModule, MatInputModule, MatSelectModule, MatTableModule, HealthScoreComponent, RiskBadgeComponent, StatCardComponent],
+  imports: [DatePipe, RouterLink, BaseChartDirective, MatButtonModule, MatCardModule, MatExpansionModule, MatIconModule, MatInputModule, MatSelectModule, MatTabsModule, MatTableModule, HealthScoreComponent, RiskBadgeComponent, StatCardComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (report()) {
@@ -31,54 +32,81 @@ import { I18nService } from '../../core/i18n.service';
         </div>
         <button mat-flat-button class="primary-action compact"><mat-icon>download</mat-icon>{{ i18n.t('report.export') }}</button>
       </section>
-      <section class="report-action-grid">
-        <mat-card [class]="'triage-card ' + triageTone()">
-          <span class="section-kicker">{{ i18n.t('report.triage') }}</span>
-          <h2>{{ triageTitle() }}</h2>
-          <p>{{ triageText() }}</p>
-          <div class="triage-pills">
-            <span class="metric-badge risk critical bad">{{ fixNowItems().length }} {{ i18n.t('report.fixNow') }}</span>
-            <span class="metric-badge risk high warn">{{ planItems().length }} {{ i18n.t('report.planThisSprint') }}</span>
-            <span class="metric-badge risk clear">{{ monitorItems().length }} {{ i18n.t('report.monitor') }}</span>
-          </div>
-        </mat-card>
-        @if (previousComparison()) {
-          <mat-card class="mini-compare-card">
-            <span class="section-kicker">{{ i18n.t('report.previousScan') }}</span>
-            <h2>{{ signed(previousComparison()!.healthDelta) }} {{ i18n.t('compare.points') }}</h2>
-            <p>{{ previousComparison()!.newRisks.length }} {{ i18n.t('compare.newRisks') }} / {{ previousComparison()!.fixedRisks.length }} {{ i18n.t('compare.fixedRisks') }}</p>
-            <a mat-flat-button class="mini-action" [routerLink]="['/reports/compare', previousComparison()!.previousScan.id, previousComparison()!.currentScan.id]"><mat-icon>compare_arrows</mat-icon>{{ i18n.t('history.compare') }}</a>
-          </mat-card>
-        }
-      </section>
-      <section class="action-lanes">
-        @for (lane of actionLanes(); track lane.key) {
-          <mat-card [class]="'action-lane ' + lane.tone">
-            <div>
-              <span class="section-kicker">{{ packageCountLabel(lane.count) }}</span>
-              <h2>{{ lane.title }}</h2>
-              <p>{{ lane.text }}</p>
-            </div>
-            <span class="lane-dot">{{ lane.count }}</span>
-          </mat-card>
-        }
-      </section>
-      <section class="report-summary">
-        <mat-card class="health-panel">
-          <h2>{{ i18n.t('report.overallHealth') }}</h2>
-          <app-health-score [score]="report()!.scan.healthScore" [size]="96" />
-        </mat-card>
-        <app-stat-card [label]="i18n.t('report.totalDependencies')" [value]="report()!.scan.totalDependencies + report()!.scan.totalDevDependencies" icon="inventory_2" [trend]="i18n.t('report.monitored')" tone="blue" />
-        <app-stat-card [label]="i18n.t('report.outdated')" [value]="report()!.scan.outdatedCount" icon="update" [trend]="report()!.scan.outdatedCount ? i18n.t('report.needsUpdate') : i18n.t('report.noneFound')" [tone]="report()!.scan.outdatedCount ? 'warn' : 'good'" />
-        <app-stat-card [label]="i18n.t('report.vulnerable')" [value]="report()!.scan.vulnerableCount" icon="gpp_bad" [trend]="report()!.scan.vulnerableCount ? i18n.t('report.needsReview') : i18n.t('report.noneFound')" [tone]="report()!.scan.vulnerableCount ? 'bad' : 'good'" />
-        <app-stat-card [label]="i18n.t('report.deprecated')" [value]="report()!.scan.deprecatedCount" icon="warning" [trend]="report()!.scan.deprecatedCount ? i18n.t('report.needsReplacement') : i18n.t('report.noneFound')" [tone]="report()!.scan.deprecatedCount ? 'warn' : 'good'" />
-      </section>
-      <section class="dashboard-grid">
-        <mat-card class="chart-card"><div class="card-head"><h2>{{ i18n.t('dashboard.riskDistribution') }}</h2><span>{{ i18n.t('report.severity') }}</span></div><canvas baseChart [data]="riskData()" [options]="doughnutOptions" type="doughnut"></canvas></mat-card>
-        <mat-card class="chart-card"><div class="card-head"><h2>{{ i18n.t('dashboard.updateTypes') }}</h2><span>{{ i18n.t('report.impact') }}</span></div><canvas baseChart [data]="updateData()" [options]="barOptions" type="bar"></canvas></mat-card>
-        <mat-card class="chart-card"><div class="card-head"><h2>{{ i18n.t('report.dependencyTypes') }}</h2><span>{{ i18n.t('report.scope') }}</span></div><canvas baseChart [data]="dependencyTypeData()" [options]="barOptions" type="bar"></canvas></mat-card>
-      </section>
-      <mat-card class="table-card">
+      <mat-tab-group class="report-tabs" animationDuration="160ms">
+        <mat-tab [label]="i18n.t('report.tabOverview')">
+          <section class="tab-panel">
+            <section class="report-action-grid">
+              <mat-card [class]="'triage-card ' + triageTone()">
+                <span class="section-kicker">{{ i18n.t('report.triage') }}</span>
+                <h2>{{ triageTitle() }}</h2>
+                <p>{{ triageText() }}</p>
+                <div class="triage-pills">
+                  <span class="metric-badge risk critical bad">{{ fixNowItems().length }} {{ i18n.t('report.fixNow') }}</span>
+                  <span class="metric-badge risk high warn">{{ planItems().length }} {{ i18n.t('report.planThisSprint') }}</span>
+                  <span class="metric-badge risk clear">{{ monitorItems().length }} {{ i18n.t('report.monitor') }}</span>
+                </div>
+              </mat-card>
+              @if (previousComparison()) {
+                <mat-card class="mini-compare-card">
+                  <span class="section-kicker">{{ i18n.t('report.previousScan') }}</span>
+                  <h2>{{ signed(previousComparison()!.healthDelta) }} {{ i18n.t('compare.points') }}</h2>
+                  <p>{{ previousComparison()!.newRisks.length }} {{ i18n.t('compare.newRisks') }} / {{ previousComparison()!.fixedRisks.length }} {{ i18n.t('compare.fixedRisks') }}</p>
+                  <a mat-flat-button class="mini-action" [routerLink]="['/reports/compare', previousComparison()!.previousScan.id, previousComparison()!.currentScan.id]"><mat-icon>compare_arrows</mat-icon>{{ i18n.t('history.compare') }}</a>
+                </mat-card>
+              }
+            </section>
+            <section class="report-summary">
+              <mat-card class="health-panel">
+                <h2>{{ i18n.t('report.overallHealth') }}</h2>
+                <app-health-score [score]="report()!.scan.healthScore" [size]="96" />
+              </mat-card>
+              <app-stat-card [label]="i18n.t('report.totalDependencies')" [value]="report()!.scan.totalDependencies + report()!.scan.totalDevDependencies" icon="inventory_2" [trend]="i18n.t('report.monitored')" tone="blue" />
+              <app-stat-card [label]="i18n.t('report.outdated')" [value]="report()!.scan.outdatedCount" icon="update" [trend]="report()!.scan.outdatedCount ? i18n.t('report.needsUpdate') : i18n.t('report.noneFound')" [tone]="report()!.scan.outdatedCount ? 'warn' : 'good'" />
+              <app-stat-card [label]="i18n.t('report.vulnerable')" [value]="report()!.scan.vulnerableCount" icon="gpp_bad" [trend]="report()!.scan.vulnerableCount ? i18n.t('report.needsReview') : i18n.t('report.noneFound')" [tone]="report()!.scan.vulnerableCount ? 'bad' : 'good'" />
+              <app-stat-card [label]="i18n.t('report.deprecated')" [value]="report()!.scan.deprecatedCount" icon="warning" [trend]="report()!.scan.deprecatedCount ? i18n.t('report.needsReplacement') : i18n.t('report.noneFound')" [tone]="report()!.scan.deprecatedCount ? 'warn' : 'good'" />
+            </section>
+            <section class="dashboard-grid">
+              <mat-card class="chart-card"><div class="card-head"><h2>{{ i18n.t('dashboard.riskDistribution') }}</h2><span>{{ i18n.t('report.severity') }}</span></div><canvas baseChart [data]="riskData()" [options]="doughnutOptions" type="doughnut"></canvas></mat-card>
+              <mat-card class="chart-card"><div class="card-head"><h2>{{ i18n.t('dashboard.updateTypes') }}</h2><span>{{ i18n.t('report.impact') }}</span></div><canvas baseChart [data]="updateData()" [options]="barOptions" type="bar"></canvas></mat-card>
+              <mat-card class="chart-card"><div class="card-head"><h2>{{ i18n.t('report.dependencyTypes') }}</h2><span>{{ i18n.t('report.scope') }}</span></div><canvas baseChart [data]="dependencyTypeData()" [options]="barOptions" type="bar"></canvas></mat-card>
+            </section>
+          </section>
+        </mat-tab>
+        <mat-tab [label]="i18n.t('report.tabActions')">
+          <section class="tab-panel">
+            <section class="action-lanes">
+              @for (lane of actionLanes(); track lane.key) {
+                <mat-card [class]="'action-lane ' + lane.tone">
+                  <div>
+                    <span class="section-kicker">{{ packageCountLabel(lane.count) }}</span>
+                    <h2>{{ lane.title }}</h2>
+                    <p>{{ lane.text }}</p>
+                  </div>
+                  <span class="lane-dot">{{ lane.count }}</span>
+                </mat-card>
+              }
+            </section>
+            <mat-card class="table-card">
+              <div class="card-head"><h2>{{ i18n.t('report.recommendedActions') }}</h2><span>{{ packageCountLabel(fixNowItems().length + planItems().length + maintenanceItems().length) }}</span></div>
+              <div class="action-list">
+                @for (item of prioritizedItems(); track item.id) {
+                  <article [class]="'action-item ' + actionTone(item)">
+                    <div>
+                      <strong>{{ item.packageName }}</strong>
+                      <p>{{ actionLabel(item) }} - {{ localizedRiskReason(item) }}</p>
+                    </div>
+                    <span>{{ item.currentVersion }} -> {{ item.latestVersion }}</span>
+                  </article>
+                } @empty {
+                  <div class="empty-state inline-empty"><mat-icon>task_alt</mat-icon><h2>{{ i18n.t('report.noActions') }}</h2><p>{{ i18n.t('report.noActionsText') }}</p></div>
+                }
+              </div>
+            </mat-card>
+          </section>
+        </mat-tab>
+        <mat-tab [label]="i18n.t('report.tabPackages')">
+          <section class="tab-panel">
+            <mat-card class="table-card">
         <div class="card-head"><h2>{{ i18n.t('table.dependencies') }}</h2><span>{{ filteredItems().length }} / {{ report()!.items.length }} {{ i18n.t('report.packages') }}</span></div>
         <div class="report-tools">
           <mat-form-field appearance="outline"><mat-label>{{ i18n.t('report.searchPackage') }}</mat-label><input matInput [value]="search()" (input)="search.set($any($event.target).value)" /></mat-form-field>
@@ -152,7 +180,52 @@ import { I18nService } from '../../core/i18n.service';
             <div class="empty-state inline-empty"><mat-icon>filter_alt_off</mat-icon><h2>{{ i18n.t('report.noFilteredPackages') }}</h2><p>{{ i18n.t('report.noFilteredPackagesText') }}</p></div>
           }
         </mat-accordion>
-      </mat-card>
+            </mat-card>
+          </section>
+        </mat-tab>
+        <mat-tab [label]="i18n.t('report.tabVulnerabilities')">
+          <section class="tab-panel">
+            <mat-card class="table-card">
+              <div class="card-head"><h2>{{ i18n.t('report.vulnerabilities') }}</h2><span>{{ packageCountLabel(vulnerableItems().length) }}</span></div>
+              <div class="vulnerability-list report-list">
+                @for (item of vulnerableItems(); track item.id) {
+                  <article class="vulnerability-card severe">
+                    <div><strong>{{ item.packageName }}</strong><app-risk-badge [level]="item.riskLevel" /></div>
+                    <p>{{ localizedRiskReason(item) }}</p>
+                    @for (vuln of item.vulnerabilities; track vuln.id) {
+                      <p class="tip-line">{{ vuln.id }} - {{ vuln.summary }}</p>
+                    }
+                  </article>
+                } @empty {
+                  <div class="empty-state inline-empty"><mat-icon>verified_user</mat-icon><h2>{{ i18n.t('report.noKnownVulnerabilities') }}</h2><p>{{ i18n.t('report.noVulnerabilitiesText') }}</p></div>
+                }
+              </div>
+            </mat-card>
+          </section>
+        </mat-tab>
+        <mat-tab [label]="i18n.t('report.tabReleaseNotes')">
+          <section class="tab-panel">
+            <mat-card class="table-card">
+              <div class="card-head"><h2>{{ i18n.t('report.releaseInsights') }}</h2><span>{{ packageCountLabel(releaseInsightItems().length) }}</span></div>
+              <div class="release-list">
+                @for (item of releaseInsightItems(); track item.id) {
+                  <article class="release-insights">
+                    <div class="release-head">
+                      <strong>{{ item.packageName }} <small>{{ item.currentVersion }} -> {{ item.latestVersion }}</small></strong>
+                      <span class="pill muted">{{ i18n.t('release.source.' + item.releaseInsights!.source) }} - {{ i18n.t('release.confidence.' + item.releaseInsights!.confidence) }}</span>
+                    </div>
+                    <p>{{ item.releaseInsights!.summary }}</p>
+                    @for (note of releaseNotes(item); track note) { <p class="tip-line">{{ note }}</p> }
+                    @if (item.releaseInsights!.url) { <a class="external-action" [href]="item.releaseInsights!.url" target="_blank" rel="noreferrer"><mat-icon>open_in_new</mat-icon>{{ i18n.t('report.openReleaseNotes') }}</a> }
+                  </article>
+                } @empty {
+                  <div class="empty-state inline-empty"><mat-icon>article</mat-icon><h2>{{ i18n.t('report.noReleaseInsights') }}</h2><p>{{ i18n.t('report.noReleaseInsightsText') }}</p></div>
+                }
+              </div>
+            </mat-card>
+          </section>
+        </mat-tab>
+      </mat-tab-group>
     }
   `,
 })
@@ -192,6 +265,9 @@ export class ReportPage {
     { key: 'maintenance', tone: 'good', count: this.maintenanceItems().length, title: this.i18n.t('report.actionMaintenance'), text: this.i18n.t('report.actionMaintenanceText') },
     { key: 'stable', tone: 'neutral', count: this.stableItems().length, title: this.i18n.t('report.actionStable'), text: this.i18n.t('report.actionStableText') },
   ]);
+  readonly prioritizedItems = computed(() => [...this.fixNowItems(), ...this.planItems(), ...this.maintenanceItems()]);
+  readonly vulnerableItems = computed(() => (this.report()?.items ?? []).filter((item) => item.isVulnerable || item.vulnerabilities.length));
+  readonly releaseInsightItems = computed(() => (this.report()?.items ?? []).filter((item) => item.releaseInsights));
   readonly chartText = '#9cadc8';
   readonly gridColor = 'rgba(148, 163, 184, .16)';
   readonly label = computed(() => {
@@ -342,6 +418,16 @@ export class ReportPage {
   }
   signed(value: number) { return value > 0 ? `+${value}` : String(value); }
   packageCountLabel(count: number) { return `${count} ${count === 1 ? this.i18n.t('report.packageSingular') : this.i18n.t('report.packages')}`; }
+  actionTone(item: DependencyScanItem) {
+    if (this.fixNowItems().includes(item)) return 'bad';
+    if (this.planItems().includes(item)) return 'warn';
+    return 'good';
+  }
+  actionLabel(item: DependencyScanItem) {
+    if (this.fixNowItems().includes(item)) return this.i18n.t('report.actionUrgent');
+    if (this.planItems().includes(item)) return this.i18n.t('report.actionPlanned');
+    return this.i18n.t('report.actionMaintenance');
+  }
   copy(command: string) { navigator.clipboard?.writeText(command); }
 }
 
