@@ -20,6 +20,12 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
     .score strong { font-size: 1.25rem; line-height: 1; color: var(--text); }
     .score span { font-size: .68rem; line-height: 1; color: var(--muted); }
     .good { color: #22c55e; } .warn { color: #f59e0b; } .bad { color: #ff5d73; }
+    :host ::ng-deep .score.good .mdc-circular-progress__determinate-circle { stroke: #22c55e !important; }
+    :host ::ng-deep .score.warn .mdc-circular-progress__determinate-circle { stroke: #f59e0b !important; }
+    :host ::ng-deep .score.bad .mdc-circular-progress__determinate-circle { stroke: #ff5d73 !important; }
+    :host ::ng-deep .score.good .mdc-circular-progress__determinate-track,
+    :host ::ng-deep .score.warn .mdc-circular-progress__determinate-track,
+    :host ::ng-deep .score.bad .mdc-circular-progress__determinate-track { stroke: rgba(148, 163, 184, .18) !important; }
     .score.good .score-value strong { color: #dcfce7; }
     .score.warn .score-value strong { color: #fef3c7; }
     .score.bad .score-value strong { color: #ffe4e6; }
