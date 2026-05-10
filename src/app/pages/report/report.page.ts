@@ -69,10 +69,10 @@ import { I18nService } from '../../core/i18n.service';
           <app-health-score [score]="report()!.scan.healthScore" [size]="118" />
           <p>{{ i18n.t('report.healthText') }}</p>
         </mat-card>
-        <app-stat-card [label]="i18n.t('report.totalDependencies')" [value]="report()!.scan.totalDependencies + report()!.scan.totalDevDependencies" icon="inventory_2" tone="blue" />
-        <app-stat-card [label]="i18n.t('report.outdated')" [value]="report()!.scan.outdatedCount" icon="update" tone="amber" />
-        <app-stat-card [label]="i18n.t('report.vulnerable')" [value]="report()!.scan.vulnerableCount" icon="gpp_bad" tone="red" />
-        <app-stat-card [label]="i18n.t('report.deprecated')" [value]="report()!.scan.deprecatedCount" icon="warning" tone="amber" />
+        <app-stat-card [label]="i18n.t('report.totalDependencies')" [value]="report()!.scan.totalDependencies + report()!.scan.totalDevDependencies" icon="inventory_2" [trend]="i18n.t('report.monitored')" tone="blue" />
+        <app-stat-card [label]="i18n.t('report.outdated')" [value]="report()!.scan.outdatedCount" icon="update" [trend]="report()!.scan.outdatedCount ? i18n.t('report.needsUpdate') : i18n.t('report.noneFound')" [tone]="report()!.scan.outdatedCount ? 'warn' : 'good'" />
+        <app-stat-card [label]="i18n.t('report.vulnerable')" [value]="report()!.scan.vulnerableCount" icon="gpp_bad" [trend]="report()!.scan.vulnerableCount ? i18n.t('report.needsReview') : i18n.t('report.noneFound')" [tone]="report()!.scan.vulnerableCount ? 'bad' : 'good'" />
+        <app-stat-card [label]="i18n.t('report.deprecated')" [value]="report()!.scan.deprecatedCount" icon="warning" [trend]="report()!.scan.deprecatedCount ? i18n.t('report.needsReplacement') : i18n.t('report.noneFound')" [tone]="report()!.scan.deprecatedCount ? 'warn' : 'good'" />
       </section>
       <section class="dashboard-grid">
         <mat-card class="chart-card"><div class="card-head"><h2>{{ i18n.t('dashboard.riskDistribution') }}</h2><span>{{ i18n.t('report.severity') }}</span></div><canvas baseChart [data]="riskData()" [options]="doughnutOptions" type="doughnut"></canvas></mat-card>

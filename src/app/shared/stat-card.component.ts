@@ -21,6 +21,6 @@ export class StatCardComponent {
   label = input.required<string>();
   value = input.required<string | number>();
   icon = input('analytics');
-  trend = input('Ready');
-  tone = input<'blue' | 'teal' | 'amber' | 'red' | 'violet'>('blue');
+  trend = input('');
+  tone = input<'blue' | 'teal' | 'amber' | 'red' | 'violet' | 'good' | 'warn' | 'bad'>('blue');
 }
