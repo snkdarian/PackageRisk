@@ -1,10 +1,11 @@
 import { DatePipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ChartConfiguration } from 'chart.js';
 import { BaseChartDirective } from 'ng2-charts';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -20,7 +21,7 @@ import { I18nService } from '../../core/i18n.service';
 
 @Component({
   selector: 'app-report-page',
-  imports: [DatePipe, RouterLink, BaseChartDirective, MatButtonModule, MatCardModule, MatExpansionModule, MatIconModule, MatInputModule, MatSelectModule, MatTabsModule, MatTableModule, HealthScoreComponent, RiskBadgeComponent, StatCardComponent],
+  imports: [DatePipe, RouterLink, BaseChartDirective, MatButtonModule, MatCardModule, MatCheckboxModule, MatExpansionModule, MatIconModule, MatInputModule, MatSelectModule, MatTabsModule, MatTableModule, HealthScoreComponent, RiskBadgeComponent, StatCardComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (report()) {
@@ -102,6 +103,49 @@ import { I18nService } from '../../core/i18n.service';
                 }
               </div>
             </mat-card>
+          </section>
+        </mat-tab>
+        <mat-tab [label]="i18n.t('report.tabUpdatePlanner')">
+          <section class="tab-panel">
+            <section class="planner-grid">
+              <mat-card class="table-card">
+                <div class="card-head">
+                  <h2>{{ i18n.t('report.updatePlanner') }}</h2>
+                  <span>{{ selectedUpdateItems().length }} / {{ updatableItems().length }} {{ i18n.t('report.selected') }}</span>
+                </div>
+                <div class="planner-actions">
+                  <button mat-stroked-button type="button" (click)="selectRecommendedUpdates()"><mat-icon>playlist_add_check</mat-icon>{{ i18n.t('report.selectRecommended') }}</button>
+                  <button mat-stroked-button type="button" (click)="clearUpdateSelection()"><mat-icon>remove_done</mat-icon>{{ i18n.t('report.clearSelection') }}</button>
+                </div>
+                <div class="planner-list">
+                  @for (item of updatableItems(); track item.id) {
+                    <article [class]="'planner-item ' + updateImpactClass(item)">
+                      <mat-checkbox [checked]="isUpdateSelected(item.id)" (change)="toggleUpdate(item.id, $event.checked)">
+                        <strong>{{ item.packageName }}</strong>
+                      </mat-checkbox>
+                      <span>{{ item.currentRange }} -> {{ plannedRange(item) }}</span>
+                      <div class="planner-badges">
+                        <app-risk-badge [level]="item.riskLevel" />
+                        <span [class]="'metric-badge update ' + item.updateType">{{ i18n.t('update.' + item.updateType) }}</span>
+                      </div>
+                    </article>
+                  } @empty {
+                    <div class="empty-state inline-empty"><mat-icon>task_alt</mat-icon><h2>{{ i18n.t('report.noUpdatablePackages') }}</h2><p>{{ i18n.t('report.noUpdatablePackagesText') }}</p></div>
+                  }
+                </div>
+              </mat-card>
+              <mat-card class="table-card planner-preview">
+                <div class="card-head">
+                  <h2>{{ i18n.t('report.updatedPackageJson') }}</h2>
+                  <span>{{ selectedUpdateItems().length }} {{ i18n.t('report.selected') }}</span>
+                </div>
+                <div class="planner-actions">
+                  <button mat-flat-button class="mini-action" type="button" (click)="copyUpdatedPackageJson()"><mat-icon>content_copy</mat-icon>{{ i18n.t('common.copy') }}</button>
+                  <button mat-flat-button class="mini-action" type="button" (click)="downloadUpdatedPackageJson()"><mat-icon>download</mat-icon>{{ i18n.t('report.downloadJson') }}</button>
+                </div>
+                <code>{{ updatedPackageJsonText() }}</code>
+              </mat-card>
+            </section>
           </section>
         </mat-tab>
         <mat-tab [label]="i18n.t('report.tabPackages')">
@@ -235,6 +279,8 @@ export class ReportPage {
   readonly i18n = inject(I18nService);
   private readonly id = signal(this.route.snapshot.paramMap.get('scanId') ?? '');
   readonly report = computed(() => this.scans.getReport(this.id()));
+  readonly selectedUpdateIds = signal<string[]>([]);
+  private readonly selectionInitializedFor = signal('');
   readonly search = signal('');
   readonly riskFilter = signal<RiskLevel | 'all'>('all');
   readonly updateFilter = signal<UpdateType | 'all'>('all');
@@ -268,6 +314,14 @@ export class ReportPage {
   readonly prioritizedItems = computed(() => [...this.fixNowItems(), ...this.planItems(), ...this.maintenanceItems()]);
   readonly vulnerableItems = computed(() => (this.report()?.items ?? []).filter((item) => item.isVulnerable || item.vulnerabilities.length));
   readonly releaseInsightItems = computed(() => (this.report()?.items ?? []).filter((item) => item.releaseInsights));
+  readonly updatableItems = computed(() => (this.report()?.items ?? []).filter((item) => item.isOutdated && item.latestVersion && item.latestVersion !== item.currentVersion && item.updateType !== 'none' && item.updateType !== 'unknown'));
+  readonly recommendedUpdateItems = computed(() => this.updatableItems().filter((item) => item.isVulnerable || item.updateType === 'patch' || item.updateType === 'minor'));
+  readonly selectedUpdateItems = computed(() => {
+    const selected = new Set(this.selectedUpdateIds());
+    return this.updatableItems().filter((item) => selected.has(item.id));
+  });
+  readonly updatedPackageJson = computed(() => buildUpdatedPackageJson(this.report()?.project.packageJson, this.report()?.items ?? [], this.selectedUpdateItems()));
+  readonly updatedPackageJsonText = computed(() => JSON.stringify(this.updatedPackageJson(), null, 2));
   readonly chartText = '#9cadc8';
   readonly gridColor = 'rgba(148, 163, 184, .16)';
   readonly label = computed(() => {
@@ -289,6 +343,14 @@ export class ReportPage {
     cutout: '68%',
     plugins: { legend: { position: 'bottom', labels: { color: this.chartText, usePointStyle: true, boxWidth: 8 } } },
   };
+  constructor() {
+    effect(() => {
+      const scanId = this.report()?.scan.id ?? '';
+      if (!scanId || this.selectionInitializedFor() === scanId) return;
+      this.selectedUpdateIds.set(this.recommendedUpdateItems().map((item) => item.id));
+      this.selectionInitializedFor.set(scanId);
+    });
+  }
   riskData(): ChartConfiguration<'doughnut'>['data'] {
     const scan = this.report()!.scan;
     return { labels: [this.i18n.t('risk.low'), this.i18n.t('risk.medium'), this.i18n.t('risk.high'), this.i18n.t('risk.critical')], datasets: [{ data: [scan.lowRiskCount, scan.mediumRiskCount, scan.highRiskCount, scan.criticalRiskCount], backgroundColor: ['#22c55e', '#f59e0b', '#f97316', '#ef4444'], borderWidth: 0 }] };
@@ -428,9 +490,54 @@ export class ReportPage {
     if (this.planItems().includes(item)) return this.i18n.t('report.actionPlanned');
     return this.i18n.t('report.actionMaintenance');
   }
+  isUpdateSelected(id: string) { return this.selectedUpdateIds().includes(id); }
+  toggleUpdate(id: string, checked: boolean) {
+    const selected = new Set(this.selectedUpdateIds());
+    checked ? selected.add(id) : selected.delete(id);
+    this.selectedUpdateIds.set([...selected]);
+  }
+  selectRecommendedUpdates() { this.selectedUpdateIds.set(this.recommendedUpdateItems().map((item) => item.id)); }
+  clearUpdateSelection() { this.selectedUpdateIds.set([]); }
+  plannedRange(item: DependencyScanItem) { return preserveRangePrefix(item.currentRange, item.latestVersion); }
+  copyUpdatedPackageJson() { this.copy(this.updatedPackageJsonText()); }
+  downloadUpdatedPackageJson() {
+    const blob = new Blob([this.updatedPackageJsonText()], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'package.json';
+    link.click();
+    URL.revokeObjectURL(url);
+  }
   copy(command: string) { navigator.clipboard?.writeText(command); }
 }
 
 function updateRank(type: UpdateType) {
   return type === 'major' ? 4 : type === 'minor' ? 3 : type === 'patch' ? 2 : type === 'none' ? 1 : 0;
+}
+
+function buildUpdatedPackageJson(source: Record<string, unknown> | undefined, allItems: DependencyScanItem[], selectedItems: DependencyScanItem[]) {
+  const base = source ? structuredClone(source) as Record<string, any> : buildPackageJsonFromItems(allItems);
+  for (const item of selectedItems) {
+    const section = item.dependencyType === 'dependency' ? 'dependencies' : 'devDependencies';
+    base[section] = { ...(base[section] ?? {}) };
+    base[section][item.packageName] = preserveRangePrefix(String(base[section][item.packageName] ?? item.currentRange), item.latestVersion);
+  }
+  return base;
+}
+
+function buildPackageJsonFromItems(items: DependencyScanItem[]) {
+  const packageJson: Record<string, any> = { dependencies: {}, devDependencies: {} };
+  for (const item of items) {
+    const section = item.dependencyType === 'dependency' ? 'dependencies' : 'devDependencies';
+    packageJson[section][item.packageName] = item.currentRange;
+  }
+  if (!Object.keys(packageJson['dependencies']).length) delete packageJson['dependencies'];
+  if (!Object.keys(packageJson['devDependencies']).length) delete packageJson['devDependencies'];
+  return packageJson;
+}
+
+function preserveRangePrefix(currentRange: string, latestVersion: string) {
+  const prefix = currentRange.match(/^(\^|~|>=|>|<=|<|=)/)?.[0] ?? '';
+  return `${prefix}${latestVersion}`;
 }

@@ -271,6 +271,18 @@ textarea { font-family: 'Cascadia Code', Consolas, monospace !important; }
 .action-item.good { --card-accent: #22c55e; }
 .action-item strong, .action-item span { color: var(--text); font-weight: 900; }
 .action-item p { margin: 4px 0 0; }
+.planner-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, .9fr); gap: 18px; align-items: start; }
+.planner-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+.planner-actions button { color: var(--primary) !important; border-color: color-mix(in srgb, var(--primary) 28%, var(--line)) !important; }
+.planner-list { display: grid; gap: 10px; }
+.planner-item { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(150px, auto) auto; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--line); border-left: 4px solid currentColor; border-radius: 8px; background: color-mix(in srgb, var(--surface-2) 62%, transparent); }
+.planner-item.severe { color: #ff5d73; }
+.planner-item.moderate { color: #f59e0b; }
+.planner-item.soft { color: #22c55e; }
+.planner-item.neutral { color: #94a3b8; }
+.planner-item > span { color: var(--muted); font-weight: 900; }
+.planner-badges { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.planner-preview code { max-height: 520px; white-space: pre; }
 .health-panel { min-height: 168px; padding: 22px !important; display: grid !important; grid-template-columns: 1fr auto; align-items: center; gap: 14px; }
 .health-panel h2 { margin: 0; max-width: 12ch; line-height: 1.15; }
 .expanded-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 22px; }
@@ -401,6 +413,9 @@ code { display: block; padding: 12px; border-radius: 8px; background: var(--surf
   .hero, .scan-layout, .report-summary { grid-template-columns: 1fr; }
   .report-action-grid, .report-tools { grid-template-columns: 1fr; }
   .action-lanes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .planner-grid { grid-template-columns: 1fr; }
+  .planner-item { grid-template-columns: 1fr; align-items: start; }
+  .planner-badges { justify-content: flex-start; }
   .mat-expansion-panel-header { align-items: flex-start; height: auto !important; padding-top: 14px !important; padding-bottom: 14px !important; }
   .mat-expansion-panel-header-description { flex-wrap: wrap; justify-content: flex-start; margin-left: 0; }
   .feature-grid, .stats-grid, .dashboard-grid { grid-template-columns: repeat(2, 1fr); }

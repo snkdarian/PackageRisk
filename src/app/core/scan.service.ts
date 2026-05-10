@@ -91,6 +91,7 @@ export class ScanService {
   }
 
   async runScan(projectId: string, packageJson: any, lockFileContent?: string) {
+    await this.projects.updateProject(projectId, { packageJson, lockFileContent });
     if (this.supabase.client) {
       const { data, error } = await this.supabase.client.functions.invoke('analyze-dependencies', {
         body: { projectId, packageJson, lockFileContent },
