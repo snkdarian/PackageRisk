@@ -254,7 +254,8 @@ textarea { font-family: 'Cascadia Code', Consolas, monospace !important; }
 .action-lane.good { border-color: color-mix(in srgb, #22c55e 34%, var(--line)); background: linear-gradient(145deg, color-mix(in srgb, #22c55e 8%, var(--surface)), var(--surface)) !important; }
 .action-lane.neutral { border-color: color-mix(in srgb, #94a3b8 28%, var(--line)); }
 .lane-dot { position: absolute; right: 18px; bottom: 18px; width: 46px; height: 46px; display: grid; place-items: center; border-radius: 999px; color: var(--text); background: color-mix(in srgb, var(--primary) 16%, var(--surface-3)); font-weight: 900; }
-.health-panel { padding: 22px !important; display: grid !important; justify-items: start; gap: 12px; }
+.health-panel { min-height: 168px; padding: 22px !important; display: grid !important; grid-template-columns: 1fr auto; align-items: center; gap: 14px; }
+.health-panel h2 { margin: 0; max-width: 12ch; line-height: 1.15; }
 .expanded-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 22px; }
 .tip-line { margin-bottom: 8px; padding-left: 12px; border-left: 2px solid var(--primary); }
 .prediction-line { padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: color-mix(in srgb, var(--primary) 10%, transparent); color: var(--text); font-weight: 800; }

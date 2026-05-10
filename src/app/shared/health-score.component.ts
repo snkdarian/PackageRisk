@@ -19,7 +19,10 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
     .score-value { position: absolute; inset: 0; display: grid; place-items: center; align-content: center; gap: 0; pointer-events: none; }
     .score strong { font-size: 1.25rem; line-height: 1; color: var(--text); }
     .score span { font-size: .68rem; line-height: 1; color: var(--muted); }
-    .good { color: #16a34a; } .warn { color: #f59e0b; } .bad { color: #ef4444; }
+    .good { color: #22c55e; } .warn { color: #f59e0b; } .bad { color: #ff5d73; }
+    .score.good .score-value strong { color: #dcfce7; }
+    .score.warn .score-value strong { color: #fef3c7; }
+    .score.bad .score-value strong { color: #ffe4e6; }
   `,
 })
 export class HealthScoreComponent {

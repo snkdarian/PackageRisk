@@ -65,9 +65,8 @@ import { I18nService } from '../../core/i18n.service';
       </section>
       <section class="report-summary">
         <mat-card class="health-panel">
-          <div class="card-head"><h2>{{ i18n.t('report.overallHealth') }}</h2><span [class]="'metric-badge health ' + healthTone(report()!.scan.healthScore)">{{ label() }}</span></div>
-          <app-health-score [score]="report()!.scan.healthScore" [size]="118" />
-          <p>{{ i18n.t('report.healthText') }}</p>
+          <h2>{{ i18n.t('report.overallHealth') }}</h2>
+          <app-health-score [score]="report()!.scan.healthScore" [size]="96" />
         </mat-card>
         <app-stat-card [label]="i18n.t('report.totalDependencies')" [value]="report()!.scan.totalDependencies + report()!.scan.totalDevDependencies" icon="inventory_2" [trend]="i18n.t('report.monitored')" tone="blue" />
         <app-stat-card [label]="i18n.t('report.outdated')" [value]="report()!.scan.outdatedCount" icon="update" [trend]="report()!.scan.outdatedCount ? i18n.t('report.needsUpdate') : i18n.t('report.noneFound')" [tone]="report()!.scan.outdatedCount ? 'warn' : 'good'" />
