@@ -51,6 +51,18 @@ import { I18nService } from '../../core/i18n.service';
           </mat-card>
         }
       </section>
+      <section class="action-lanes">
+        @for (lane of actionLanes(); track lane.key) {
+          <mat-card [class]="'action-lane ' + lane.tone">
+            <div>
+              <span class="section-kicker">{{ lane.count }} {{ i18n.t('report.packages') }}</span>
+              <h2>{{ lane.title }}</h2>
+              <p>{{ lane.text }}</p>
+            </div>
+            <span class="lane-dot">{{ lane.count }}</span>
+          </mat-card>
+        }
+      </section>
       <section class="report-summary">
         <mat-card class="health-panel">
           <div class="card-head"><h2>{{ i18n.t('report.overallHealth') }}</h2><span [class]="'metric-badge health ' + healthTone(report()!.scan.healthScore)">{{ label() }}</span></div>
@@ -92,7 +104,7 @@ import { I18nService } from '../../core/i18n.service';
                 </mat-panel-description>
               </mat-expansion-panel-header>
               <div class="expanded-grid">
-                <div><h3>{{ i18n.t('report.whyRisk') }}</h3><p>{{ localizedRiskReason(item) }}</p><p>{{ localizedExplanation(item) }}</p><p class="prediction-line">{{ prediction(item) }}</p></div>
+                <div><h3>{{ i18n.t('report.primarySignal') }}</h3><p>{{ localizedRiskReason(item) }}</p><p>{{ localizedExplanation(item) }}</p><p class="prediction-line">{{ prediction(item) }}</p></div>
                 <div><h3>{{ i18n.t('report.recommendedCommand') }}</h3><code>{{ item.updateCommand }}</code><button mat-button (click)="copy(item.updateCommand)">{{ i18n.t('common.copy') }}</button><h3>{{ i18n.t('report.remediationPlan') }}</h3>@for (step of remediationSteps(item); track step) { <p class="tip-line">{{ step }}</p> }</div>
                 <div><h3>{{ i18n.t('report.updateImpact') }}</h3>
                   <div class="version-strip">
@@ -170,9 +182,17 @@ export class ReportPage {
       .sort((a, b) => this.sortBy() === 'name' ? a.packageName.localeCompare(b.packageName) : this.sortBy() === 'update' ? updateRank(b.updateType) - updateRank(a.updateType) : b.riskScore - a.riskScore);
   });
   readonly fixNowItems = computed(() => (this.report()?.items ?? []).filter((item) => item.riskLevel === 'critical' || item.riskLevel === 'high' || item.isVulnerable));
-  readonly planItems = computed(() => (this.report()?.items ?? []).filter((item) => item.updateType === 'major' || item.riskLevel === 'medium'));
+  readonly planItems = computed(() => (this.report()?.items ?? []).filter((item) => !this.fixNowItems().includes(item) && (item.updateType === 'major' || item.riskLevel === 'medium')));
   readonly monitorItems = computed(() => (this.report()?.items ?? []).filter((item) => item.riskLevel === 'low' || item.riskLevel === 'none'));
   readonly safePatchItems = computed(() => (this.report()?.items ?? []).filter((item) => item.updateType === 'patch' && !item.isVulnerable && item.riskLevel !== 'critical' && item.riskLevel !== 'high'));
+  readonly maintenanceItems = computed(() => (this.report()?.items ?? []).filter((item) => !item.isVulnerable && (item.updateType === 'patch' || item.updateType === 'minor') && (item.riskLevel === 'low' || item.riskLevel === 'none')));
+  readonly stableItems = computed(() => (this.report()?.items ?? []).filter((item) => !item.isOutdated && !item.isVulnerable && item.riskLevel === 'none'));
+  readonly actionLanes = computed(() => [
+    { key: 'urgent', tone: 'bad', count: this.fixNowItems().length, title: this.i18n.t('report.actionUrgent'), text: this.i18n.t('report.actionUrgentText') },
+    { key: 'planned', tone: 'warn', count: this.planItems().length, title: this.i18n.t('report.actionPlanned'), text: this.i18n.t('report.actionPlannedText') },
+    { key: 'maintenance', tone: 'good', count: this.maintenanceItems().length, title: this.i18n.t('report.actionMaintenance'), text: this.i18n.t('report.actionMaintenanceText') },
+    { key: 'stable', tone: 'neutral', count: this.stableItems().length, title: this.i18n.t('report.actionStable'), text: this.i18n.t('report.actionStableText') },
+  ]);
   readonly chartText = '#9cadc8';
   readonly gridColor = 'rgba(148, 163, 184, .16)';
   readonly label = computed(() => {
@@ -233,8 +253,8 @@ export class ReportPage {
   localizedRiskReason(item: DependencyScanItem) {
     if (item.isVulnerable) return this.i18n.t('reason.vulnerable');
     if (item.isDeprecated) return this.i18n.t('reason.deprecated');
-    if (item.updateType === 'major') return this.i18n.t('reason.major');
     if (item.isPossiblyAbandoned) return this.i18n.t('reason.abandoned');
+    if (item.updateType === 'major') return this.i18n.t('reason.major');
     if (item.isOutdated) return this.i18n.t('reason.outdated');
     return this.i18n.t('reason.none');
   }

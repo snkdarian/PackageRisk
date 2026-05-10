@@ -244,6 +244,15 @@ textarea { font-family: 'Cascadia Code', Consolas, monospace !important; }
 .triage-card h2, .mini-compare-card h2 { margin: 0; font-size: 1.35rem; }
 .triage-card p, .mini-compare-card p { margin: 0; line-height: 1.5; }
 .triage-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.action-lanes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 18px; }
+.action-lane { position: relative; overflow: hidden; min-height: 154px; border: 1px solid var(--line); background: var(--surface) !important; }
+.action-lane h2 { font-size: 1.05rem; margin-bottom: 6px; }
+.action-lane p { margin: 0; color: var(--muted); }
+.action-lane.bad { border-color: color-mix(in srgb, #ef4444 42%, var(--line)); }
+.action-lane.warn { border-color: color-mix(in srgb, #f59e0b 42%, var(--line)); }
+.action-lane.good { border-color: color-mix(in srgb, #22c55e 34%, var(--line)); }
+.action-lane.neutral { border-color: color-mix(in srgb, #94a3b8 28%, var(--line)); }
+.lane-dot { position: absolute; right: 14px; bottom: 12px; width: 42px; height: 42px; display: grid; place-items: center; border-radius: 999px; color: var(--text); background: color-mix(in srgb, var(--primary) 16%, var(--surface-3)); font-weight: 900; }
 .health-panel { padding: 22px !important; display: grid !important; justify-items: start; gap: 12px; }
 .expanded-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 22px; }
 .tip-line { margin-bottom: 8px; padding-left: 12px; border-left: 2px solid var(--primary); }
@@ -372,6 +381,7 @@ code { display: block; padding: 12px; border-radius: 8px; background: var(--surf
 @media (max-width: 1180px) {
   .hero, .scan-layout, .report-summary { grid-template-columns: 1fr; }
   .report-action-grid, .report-tools { grid-template-columns: 1fr; }
+  .action-lanes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .mat-expansion-panel-header { align-items: flex-start; height: auto !important; padding-top: 14px !important; padding-bottom: 14px !important; }
   .mat-expansion-panel-header-description { flex-wrap: wrap; justify-content: flex-start; margin-left: 0; }
   .feature-grid, .stats-grid, .dashboard-grid { grid-template-columns: repeat(2, 1fr); }
@@ -388,6 +398,7 @@ code { display: block; padding: 12px; border-radius: 8px; background: var(--surf
   .project-card { grid-template-columns: 1fr; align-items: stretch; }
   .project-toolbar { align-items: flex-start; flex-direction: column; }
   .project-actions { justify-content: flex-start; }
+  .action-lanes { grid-template-columns: 1fr; }
   .profile-copy { display: none; }
   .metrics { grid-template-columns: 1fr 1fr; }
   .sidebar { display: none !important; }
