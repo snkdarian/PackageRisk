@@ -57,6 +57,22 @@ import { I18nService } from '../../core/i18n.service';
                 </mat-card>
               }
             </section>
+            @if (postUpdateComparison()) {
+              <mat-card class="post-update-card">
+                <div>
+                  <span class="section-kicker">{{ i18n.t('report.postUpdateKicker') }}</span>
+                  <h2>{{ i18n.t('report.postUpdateTitle') }}</h2>
+                  <p>{{ i18n.t('report.postUpdateText') }}</p>
+                </div>
+                <div class="post-update-metrics">
+                  <span class="good"><strong>{{ postUpdateComparison()!.fixedRisks.length }}</strong>{{ i18n.t('compare.fixedRisks') }}</span>
+                  <span [class]="postUpdateComparison()!.healthDelta >= 0 ? 'good' : 'bad'"><strong>{{ signed(postUpdateComparison()!.healthDelta) }}</strong>{{ i18n.t('compare.points') }}</span>
+                  <span class="info"><strong>{{ postUpdateComparison()!.upgradedPackages.length }}</strong>{{ i18n.t('compare.upgraded') }}</span>
+                  <span [class]="postUpdateComparison()!.currentScan.vulnerableCount ? 'bad' : 'good'"><strong>{{ postUpdateComparison()!.currentScan.vulnerableCount }}</strong>{{ i18n.t('report.vulnerable') }}</span>
+                </div>
+                <a mat-flat-button class="primary-action compact" [routerLink]="['/reports/compare', postUpdateComparison()!.previousScan.id, postUpdateComparison()!.currentScan.id]"><mat-icon>compare_arrows</mat-icon>{{ i18n.t('report.openPostUpdateCompare') }}</a>
+              </mat-card>
+            }
             <section class="report-summary">
               <mat-card class="health-panel">
                 <h2>{{ i18n.t('report.overallHealth') }}</h2>
@@ -360,6 +376,8 @@ export class ReportPage {
   readonly updatePlanApplying = signal(false);
   readonly updatePlanApplied = signal(false);
   readonly updatePlanStatus = signal('');
+  readonly postUpdatePlanScanId = signal('');
+  private readonly postUpdateLoadedFor = signal('');
   private readonly selectionInitializedFor = signal('');
   readonly search = signal('');
   readonly riskFilter = signal<RiskLevel | 'all'>('all');
@@ -370,6 +388,12 @@ export class ReportPage {
     if (!scan) return null;
     const previousId = this.scans.getPreviousScanId(scan);
     return previousId ? this.scans.compareScans(previousId, scan.id) : null;
+  });
+  readonly postUpdateComparison = computed(() => {
+    const currentScanId = this.report()?.scan.id;
+    const planScanId = this.postUpdatePlanScanId();
+    if (!currentScanId || !planScanId || planScanId === currentScanId) return null;
+    return this.scans.compareScans(planScanId, currentScanId);
   });
   readonly filteredItems = computed(() => {
     const term = this.search().trim().toLowerCase();
@@ -444,6 +468,12 @@ export class ReportPage {
       this.updatePlanApplied.set(loadAppliedUpdatePlan(scanId));
       this.selectionInitializedFor.set(scanId);
       void this.loadSavedUpdatePlan(scanId);
+    });
+    effect(() => {
+      const report = this.report();
+      if (!report || this.postUpdateLoadedFor() === report.scan.id) return;
+      this.postUpdateLoadedFor.set(report.scan.id);
+      void this.loadPostUpdatePlanResult(report.project.id, report.scan.id);
     });
   }
   riskData(): ChartConfiguration<'doughnut'>['data'] {
@@ -605,6 +635,16 @@ export class ReportPage {
       this.updatePlanStatus.set(plan.status === 'applied' ? this.i18n.t('report.planAppliedStatus') : this.i18n.t('report.planLoaded'));
     } catch {
       this.updatePlanStatus.set(this.i18n.t('report.planLoadFailed'));
+    }
+  }
+  async loadPostUpdatePlanResult(projectId: string, currentScanId: string) {
+    try {
+      const plan = await this.updatePlans.getLatestAppliedPlanForProject(projectId, currentScanId);
+      if (plan?.scanId && this.scans.getScanById(plan.scanId)) {
+        this.postUpdatePlanScanId.set(plan.scanId);
+      }
+    } catch {
+      this.postUpdatePlanScanId.set('');
     }
   }
   async saveUpdatePlan() {

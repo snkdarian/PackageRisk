@@ -256,6 +256,15 @@ textarea { font-family: 'Cascadia Code', Consolas, monospace !important; }
 .triage-card h2, .mini-compare-card h2 { margin: 0; font-size: 1.35rem; }
 .triage-card p, .mini-compare-card p { margin: 0; line-height: 1.5; }
 .triage-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.post-update-card { display: grid !important; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 18px; margin-bottom: 18px; padding: 20px !important; border-color: color-mix(in srgb, #22c55e 34%, var(--line)) !important; background: linear-gradient(135deg, color-mix(in srgb, #22c55e 10%, var(--surface)), color-mix(in srgb, var(--surface-2) 92%, transparent)) !important; }
+.post-update-card h2, .post-update-card p { margin: 0; }
+.post-update-card p { margin-top: 6px; line-height: 1.45; }
+.post-update-metrics { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.post-update-metrics span { min-width: 92px; padding: 10px 12px; border: 1px solid currentColor; border-radius: 8px; background: color-mix(in srgb, currentColor 10%, transparent); color: var(--muted); font-size: .72rem; font-weight: 900; text-align: center; text-transform: uppercase; }
+.post-update-metrics strong { display: block; margin-bottom: 2px; color: currentColor; font-size: 1.18rem; }
+.post-update-metrics .good { color: #22c55e; }
+.post-update-metrics .bad { color: #ff5d73; }
+.post-update-metrics .info { color: var(--primary); }
 .action-lanes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 18px; }
 .action-lane { position: relative; overflow: hidden; min-height: 172px; padding: 24px 76px 24px 24px !important; border: 1px solid var(--line); background: var(--surface) !important; }
 .action-lane h2 { font-size: 1.05rem; margin-bottom: 6px; }
@@ -450,6 +459,8 @@ code { display: block; padding: 12px; border-radius: 8px; background: var(--surf
 @media (max-width: 1180px) {
   .hero, .scan-layout, .report-summary { grid-template-columns: 1fr; }
   .report-action-grid, .report-tools { grid-template-columns: 1fr; }
+  .post-update-card { grid-template-columns: 1fr; }
+  .post-update-metrics { justify-content: flex-start; }
   .action-lanes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .planner-grid { grid-template-columns: 1fr; }
   .planner-secondary { grid-template-columns: 1fr; }

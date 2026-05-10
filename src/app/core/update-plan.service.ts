@@ -27,6 +27,21 @@ export class UpdatePlanService {
     return data ? mapUpdatePlan(data) : null;
   }
 
+  async getLatestAppliedPlanForProject(projectId: string, currentScanId: string) {
+    if (!this.supabase.client) return null;
+    const { data, error } = await this.supabase.client
+      .from('update_plans')
+      .select('*')
+      .eq('project_id', projectId)
+      .eq('status', 'applied')
+      .neq('scan_id', currentScanId)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    return data ? mapUpdatePlan(data) : null;
+  }
+
   async saveDraft(input: SaveUpdatePlanInput) {
     if (!this.supabase.client) return null;
     const { data: userData, error: userError } = await this.supabase.client.auth.getUser();
