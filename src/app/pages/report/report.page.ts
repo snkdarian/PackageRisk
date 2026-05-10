@@ -118,16 +118,24 @@ import { I18nService } from '../../core/i18n.service';
                   <button mat-stroked-button type="button" (click)="clearUpdateSelection()"><mat-icon>remove_done</mat-icon>{{ i18n.t('report.clearSelection') }}</button>
                 </div>
                 <div class="planner-list">
+                  @if (updatableItems().length) {
+                    <div class="planner-header">
+                      <span>{{ i18n.t('table.project') }}</span>
+                      <span>{{ i18n.t('impact.versionJump') }}</span>
+                      <span>{{ i18n.t('report.packageRisk') }}</span>
+                      <span>{{ i18n.t('report.updateType') }}</span>
+                      <span>{{ i18n.t('report.impact') }}</span>
+                    </div>
+                  }
                   @for (item of updatableItems(); track item.id) {
                     <article [class]="'planner-item ' + updateImpactClass(item)">
                       <mat-checkbox [checked]="isUpdateSelected(item.id)" (change)="toggleUpdate(item.id, $event.checked)">
                         <strong>{{ item.packageName }}</strong>
                       </mat-checkbox>
-                      <span class="planner-version">{{ item.currentRange }} -> {{ plannedRange(item) }} @if (item.updateType === 'major') { <small>{{ i18n.t('report.manualTesting') }}</small> }</span>
-                      <div class="planner-badges">
-                        <span class="badge-group"><small>{{ i18n.t('report.packageRisk') }}</small><app-risk-badge [level]="item.riskLevel" /></span>
-                        <span class="badge-group"><small>{{ i18n.t('report.updateType') }}</small><span [class]="'metric-badge update ' + item.updateType">{{ i18n.t('update.' + item.updateType) }}</span></span>
-                      </div>
+                      <span class="planner-version">{{ item.currentRange }} -> {{ plannedRange(item) }}</span>
+                      <app-risk-badge [level]="item.riskLevel" />
+                      <span [class]="'metric-badge update ' + item.updateType">{{ i18n.t('update.' + item.updateType) }}</span>
+                      <span class="planner-note">{{ item.updateType === 'major' ? i18n.t('report.manualTesting') : actionLabel(item) }}</span>
                     </article>
                   } @empty {
                     <div class="empty-state inline-empty"><mat-icon>task_alt</mat-icon><h2>{{ i18n.t('report.noUpdatablePackages') }}</h2><p>{{ i18n.t('report.noUpdatablePackagesText') }}</p></div>
