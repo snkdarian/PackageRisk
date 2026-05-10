@@ -72,7 +72,7 @@ import { I18nService } from '../../core/i18n.service';
         <div class="report-tools">
           <mat-form-field appearance="outline"><mat-label>{{ i18n.t('report.searchPackage') }}</mat-label><input matInput [value]="search()" (input)="search.set($any($event.target).value)" /></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>{{ i18n.t('report.riskFilter') }}</mat-label><mat-select [value]="riskFilter()" (selectionChange)="riskFilter.set($event.value)"><mat-option value="all">{{ i18n.t('dashboard.range.all') }}</mat-option><mat-option value="critical">{{ i18n.t('risk.critical') }}</mat-option><mat-option value="high">{{ i18n.t('risk.high') }}</mat-option><mat-option value="medium">{{ i18n.t('risk.medium') }}</mat-option><mat-option value="low">{{ i18n.t('risk.low') }}</mat-option><mat-option value="none">{{ i18n.t('risk.none') }}</mat-option></mat-select></mat-form-field>
-          <mat-form-field appearance="outline"><mat-label>{{ i18n.t('report.updateFilter') }}</mat-label><mat-select [value]="updateFilter()" (selectionChange)="updateFilter.set($event.value)"><mat-option value="all">{{ i18n.t('dashboard.range.all') }}</mat-option><mat-option value="major">{{ i18n.t('update.major') }}</mat-option><mat-option value="minor">{{ i18n.t('update.minor') }}</mat-option><mat-option value="patch">{{ i18n.t('update.patch') }}</mat-option><mat-option value="none">{{ i18n.t('risk.none') }}</mat-option></mat-select></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>{{ i18n.t('report.updateFilter') }}</mat-label><mat-select [value]="updateFilter()" (selectionChange)="updateFilter.set($event.value)"><mat-option value="all">{{ i18n.t('dashboard.range.all') }}</mat-option><mat-option value="major">{{ i18n.t('update.major') }}</mat-option><mat-option value="minor">{{ i18n.t('update.minor') }}</mat-option><mat-option value="patch">{{ i18n.t('update.patch') }}</mat-option><mat-option value="none">{{ i18n.t('update.none') }}</mat-option></mat-select></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>{{ i18n.t('report.sortBy') }}</mat-label><mat-select [value]="sortBy()" (selectionChange)="sortBy.set($event.value)"><mat-option value="risk">{{ i18n.t('report.sort.risk') }}</mat-option><mat-option value="name">{{ i18n.t('report.sort.name') }}</mat-option><mat-option value="update">{{ i18n.t('report.sort.update') }}</mat-option></mat-select></mat-form-field>
         </div>
         <mat-accordion>
@@ -87,8 +87,8 @@ import { I18nService } from '../../core/i18n.service';
                 </mat-panel-title>
                 <mat-panel-description>
                   <span class="score-chip">{{ item.riskScore }}/100</span>
-                  <app-risk-badge [level]="item.riskLevel" />
-                  <span [class]="'metric-badge update ' + item.updateType">{{ i18n.t('update.' + item.updateType) }}</span>
+                  <span class="badge-group"><small>{{ i18n.t('report.packageRisk') }}</small><app-risk-badge [level]="item.riskLevel" /></span>
+                  <span class="badge-group"><small>{{ i18n.t('report.updateType') }}</small><span [class]="'metric-badge update ' + item.updateType">{{ i18n.t('update.' + item.updateType) }}</span></span>
                 </mat-panel-description>
               </mat-expansion-panel-header>
               <div class="expanded-grid">
@@ -100,7 +100,7 @@ import { I18nService } from '../../core/i18n.service';
                     <mat-icon>arrow_forward</mat-icon>
                     <span><small>{{ i18n.t('report.latest') }}</small><strong>{{ item.latestVersion }}</strong></span>
                   </div>
-                  <p [class]="'impact-note ' + severityClass(item.riskLevel)">{{ updateImpact(item) }}</p>
+                  <p [class]="'impact-note ' + updateImpactClass(item)">{{ updateImpact(item) }}</p>
                   @for (change of majorChanges(item); track change) { <p class="tip-line">{{ change }}</p> }
                   @if (item.releaseInsights) {
                     <div class="release-insights">
@@ -278,6 +278,12 @@ export class ReportPage {
     if (item.updateType === 'minor') return this.i18n.t('impact.minor');
     if (item.updateType === 'patch') return this.i18n.t('impact.patch');
     return this.i18n.t('impact.none');
+  }
+  updateImpactClass(item: DependencyScanItem) {
+    if (item.updateType === 'major') return 'severe';
+    if (item.updateType === 'minor') return 'moderate';
+    if (item.updateType === 'patch') return 'soft';
+    return item.isVulnerable ? 'severe' : 'neutral';
   }
   majorChanges(item: DependencyScanItem) {
     const changes = [

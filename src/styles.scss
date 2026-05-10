@@ -271,6 +271,7 @@ code { display: block; padding: 12px; border-radius: 8px; background: var(--surf
 .metric-badge.update.major { color: #fb923c; background: color-mix(in srgb, #f97316 16%, transparent); }
 .metric-badge.update.minor { color: #62a7ff; background: color-mix(in srgb, #62a7ff 14%, transparent); }
 .metric-badge.update.patch { color: #22c55e; background: color-mix(in srgb, #22c55e 12%, transparent); }
+.metric-badge.update.none, .metric-badge.update.unknown { color: #94a3b8; background: color-mix(in srgb, #94a3b8 12%, transparent); }
 .status-badge { min-width: 92px; text-transform: capitalize; }
 .status-badge.completed { color: #22c55e; background: color-mix(in srgb, #22c55e 13%, transparent); }
 .status-badge.failed { color: #ff5d73; background: color-mix(in srgb, #ef4444 18%, transparent); }
@@ -336,6 +337,8 @@ code { display: block; padding: 12px; border-radius: 8px; background: var(--surf
 .package-row-title strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .package-row-title small { color: var(--muted); font-size: .78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .score-chip { color: var(--muted); font-weight: 800; white-space: nowrap; }
+.badge-group { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.badge-group small { color: var(--muted); font-size: .68rem; font-weight: 900; text-transform: uppercase; }
 .report-tools { display: grid; grid-template-columns: minmax(220px, 1.4fr) repeat(3, minmax(150px, .8fr)); gap: 12px; margin-bottom: 12px; }
 .report-tools mat-form-field { margin-bottom: -18px; }
 .version-strip { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
@@ -347,6 +350,7 @@ code { display: block; padding: 12px; border-radius: 8px; background: var(--surf
 .impact-note.severe { color: #ff5d73; background: color-mix(in srgb, #ef4444 12%, transparent); }
 .impact-note.moderate { color: #f59e0b; background: color-mix(in srgb, #f59e0b 12%, transparent); }
 .impact-note.soft { color: #22c55e; background: color-mix(in srgb, #22c55e 10%, transparent); }
+.impact-note.neutral { color: #94a3b8; background: color-mix(in srgb, #94a3b8 10%, transparent); }
 .release-insights { display: grid; gap: 10px; margin-top: 14px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: color-mix(in srgb, var(--surface-2) 70%, transparent); }
 .release-insights p { margin-bottom: 0; }
 .release-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
