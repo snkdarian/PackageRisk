@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { analyzePackage } from './risk-engine.ts';
 import { buildSummary } from './score.ts';
+import { detectPackageManager, parseInstalledVersions } from './lockfile-parser.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,9 +22,11 @@ Deno.serve(async (req) => {
   const body = await req.json().catch(() => null);
   if (!body?.packageJson || typeof body.packageJson !== 'object') return Response.json({ error: 'Invalid packageJson' }, { status: 400, headers: corsHeaders });
 
+  const packageManager = detectPackageManager(body.packageJson, body.lockFileName, body.lockFileContent);
+  const installedVersions = parseInstalledVersions(body.lockFileContent, packageManager);
   const entries = [
-    ...Object.entries(body.packageJson.dependencies ?? {}).map(([name, range]) => ({ name, range: String(range), dependencyType: 'dependency' as const })),
-    ...Object.entries(body.packageJson.devDependencies ?? {}).map(([name, range]) => ({ name, range: String(range), dependencyType: 'devDependency' as const })),
+    ...Object.entries(body.packageJson.dependencies ?? {}).map(([name, range]) => ({ name, range: String(range), installedVersion: installedVersions.get(name), dependencyType: 'dependency' as const })),
+    ...Object.entries(body.packageJson.devDependencies ?? {}).map(([name, range]) => ({ name, range: String(range), installedVersion: installedVersions.get(name), dependencyType: 'devDependency' as const })),
   ].filter((dep) => !/^(workspace:|file:|link:|git\+|https?:\/\/)/.test(dep.range));
 
   if (!entries.length) return Response.json({ error: 'No supported dependencies found' }, { status: 400, headers: corsHeaders });
@@ -85,6 +88,6 @@ Deno.serve(async (req) => {
     release_insights: item.releaseInsights,
   })));
 
-  await supabase.from('projects').update({ last_scan_at: new Date().toISOString(), last_health_score: summary.healthScore }).eq('id', body.projectId);
+  await supabase.from('projects').update({ package_manager: packageManager, lock_file_content: body.lockFileContent, last_scan_at: new Date().toISOString(), last_health_score: summary.healthScore }).eq('id', body.projectId);
   return Response.json({ scan, items, summary }, { headers: corsHeaders });
 });

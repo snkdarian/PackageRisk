@@ -3,8 +3,8 @@ import { queryOsv } from './osv.ts';
 import { fetchNpmPackage } from './npm-registry.ts';
 import { fetchReleaseInsights } from './release-insights.ts';
 
-export async function analyzePackage(dep: { name: string; range: string; dependencyType: 'dependency' | 'devDependency' }) {
-  const currentVersion = cleanVersion(dep.range);
+export async function analyzePackage(dep: { name: string; range: string; dependencyType: 'dependency' | 'devDependency'; installedVersion?: string }) {
+  const currentVersion = dep.installedVersion || cleanVersion(dep.range);
   const npm = await fetchNpmPackage(dep.name, currentVersion);
   const latestVersion = npm.latestVersion ?? 'unknown';
   const vulnerabilities = currentVersion ? await queryOsv(dep.name, currentVersion) : [];

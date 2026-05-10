@@ -229,11 +229,17 @@ td small { display: block; margin-top: 3px; }
 .scan-layout aside { display: grid; gap: 18px; align-content: start; }
 .editor-head { display: flex; align-items: center; justify-content: space-between; }
 .editor-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+.detected-manager { min-height: 56px; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--line)); border-radius: 8px; background: color-mix(in srgb, var(--primary) 9%, var(--surface-2)); }
+.detected-manager .section-kicker { margin-bottom: 2px; font-size: .66rem; }
+.detected-manager strong { display: block; color: var(--text); font-size: 1rem; text-transform: uppercase; }
+.detected-manager p { margin: 2px 0 0; font-size: .78rem; font-weight: 800; line-height: 1.25; }
 .upload-action { min-height: 38px; display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--line)); border-radius: 8px; color: var(--primary); background: color-mix(in srgb, var(--primary) 10%, transparent); font-weight: 900; cursor: pointer; }
 .upload-action input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 .upload-action mat-icon { font-size: 18px; width: 18px; height: 18px; }
 .json-field { width: 100%; }
 textarea { font-family: 'Cascadia Code', Consolas, monospace !important; }
+.lockfile-panel { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: -8px 0 14px; padding: 14px; border: 1px solid var(--line); border-radius: 8px; background: color-mix(in srgb, var(--surface-2) 70%, transparent); }
+.lockfile-panel p { margin: 4px 0 8px; line-height: 1.4; }
 .dependency-preview { display: flex; gap: 8px; align-items: center; color: var(--primary); font-weight: 700; }
 .scan-preview { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: -4px 0 12px; }
 .scan-submit { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
@@ -484,6 +490,7 @@ code { display: block; padding: 12px; border-radius: 8px; background: var(--surf
   .dashboard-filters { align-items: stretch; flex-direction: column; }
   .dashboard-filters mat-form-field { width: 100%; }
   .project-card { grid-template-columns: 1fr; align-items: stretch; }
+  .lockfile-panel { align-items: flex-start; flex-direction: column; }
   .project-toolbar { align-items: flex-start; flex-direction: column; }
   .project-actions { justify-content: flex-start; }
   .action-lanes { grid-template-columns: 1fr; }

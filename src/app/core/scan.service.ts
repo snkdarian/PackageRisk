@@ -1,6 +1,6 @@
 import { Injectable, computed, signal } from '@angular/core';
 import { DEMO_ITEMS, DEMO_SCANS } from './mock-data';
-import { DependencyScan, DependencyScanItem, ScanComparison, ScanReport, Vulnerability } from './models';
+import { DependencyScan, DependencyScanItem, PackageManager, ScanComparison, ScanReport, Vulnerability } from './models';
 import { ProjectService } from './project.service';
 import { SupabaseService } from './supabase.service';
 
@@ -90,11 +90,11 @@ export class ScanService {
     };
   }
 
-  async runScan(projectId: string, packageJson: any, lockFileContent?: string) {
-    await this.projects.updateProject(projectId, { packageJson, lockFileContent });
+  async runScan(projectId: string, packageJson: any, lockFileContent?: string, packageManager: PackageManager = 'npm', lockFileName?: string) {
+    await this.projects.updateProject(projectId, { packageJson, lockFileContent, packageManager });
     if (this.supabase.client) {
       const { data, error } = await this.supabase.client.functions.invoke('analyze-dependencies', {
-        body: { projectId, packageJson, lockFileContent },
+        body: { projectId, packageJson, lockFileContent, lockFileName, packageManager },
       });
       if (error) throw error;
       if (!data?.scan?.id) throw new Error(data?.error ?? 'Scan completed without a report id.');
@@ -105,10 +105,12 @@ export class ScanService {
     const dependencies = Object.entries(packageJson.dependencies ?? {});
     const devDependencies = Object.entries(packageJson.devDependencies ?? {});
     const scanId = crypto.randomUUID();
+    const installedVersions = parseInstalledVersions(lockFileContent, packageManager);
     const generated = [...dependencies, ...devDependencies].map(([name, range], index): DependencyScanItem => {
       const isDev = index >= dependencies.length;
       const majorRisk = name.includes('lodash') || name.includes('axios') || name.includes('minimist');
       const riskLevel = majorRisk ? 'high' : index % 5 === 0 ? 'medium' : index % 3 === 0 ? 'low' : 'none';
+      const currentVersion = installedVersions.get(name) ?? cleanVersion(String(range));
       return {
         id: crypto.randomUUID(),
         scanId,
@@ -116,7 +118,7 @@ export class ScanService {
         userId: 'demo-user',
         packageName: name,
         currentRange: String(range),
-        currentVersion: cleanVersion(String(range)),
+        currentVersion,
         latestVersion: bumpVersion(String(range)),
         dependencyType: isDev ? 'devDependency' : 'dependency',
         updateType: majorRisk ? 'major' : index % 3 === 0 ? 'minor' : 'patch',
@@ -130,7 +132,7 @@ export class ScanService {
         riskReason: majorRisk ? 'Known ecosystem risk indicators were found for this package.' : 'Package metadata indicates an available update.',
         aiExplanation: 'Rule-based explanation: upgrade in a branch, run tests touching direct consumers, and review release notes before merging.',
         recommendedAction: `Update ${name} after reviewing changelog and test coverage.`,
-        updateCommand: `npm install ${name}@latest`,
+        updateCommand: `${packageManager === 'yarn' ? 'yarn add' : packageManager === 'pnpm' ? 'pnpm add' : 'npm install'} ${name}@latest`,
         npmUrl: `https://www.npmjs.com/package/${encodeURIComponent(name)}`,
         releaseInsights: {
           source: 'npm-metadata',
@@ -204,6 +206,42 @@ function bumpVersion(range: string) {
   const version = cleanVersion(range).split('.').map(Number);
   if (version.length !== 3 || version.some(Number.isNaN)) return 'latest';
   return `${version[0] + 1}.${version[1]}.${version[2]}`;
+}
+
+function parseInstalledVersions(lockFileContent: string | undefined, packageManager: PackageManager) {
+  const versions = new Map<string, string>();
+  if (!lockFileContent?.trim()) return versions;
+  if (packageManager === 'npm') {
+    try {
+      const parsed = JSON.parse(lockFileContent);
+      for (const [path, meta] of Object.entries<any>(parsed.packages ?? {})) {
+        if (path.startsWith('node_modules/') && meta?.version) versions.set(path.replace(/^node_modules\//, ''), String(meta.version));
+      }
+      for (const [name, meta] of Object.entries<any>(parsed.dependencies ?? {})) {
+        if (meta?.version && !versions.has(name)) versions.set(name, String(meta.version));
+      }
+    } catch {}
+  } else if (packageManager === 'yarn') {
+    for (const block of lockFileContent.split(/\n(?=\S)/)) {
+      const version = block.match(/\n\s+version\s+"([^"]+)"/)?.[1];
+      const header = block.split('\n')[0] ?? '';
+      if (!version) continue;
+      for (const token of header.split(',')) {
+        const clean = token.trim().replace(/^"|"$/g, '');
+        const rangeIndex = clean.startsWith('@') ? clean.indexOf('@', 1) : clean.indexOf('@');
+        const name = rangeIndex > 0 ? clean.slice(0, rangeIndex) : clean;
+        if (name && !versions.has(name)) versions.set(name, version);
+      }
+    }
+  } else {
+    const dependencyLine = /^\s{4}((?:@[^/\s]+\/)?[^:\s]+):\s*(.+)$/gm;
+    let match: RegExpExecArray | null;
+    while ((match = dependencyLine.exec(lockFileContent))) {
+      const version = match[2].match(/version:\s*([^\s,}]+)/)?.[1] ?? match[2].match(/^([0-9]+\.[0-9]+\.[0-9][^\s]*)/)?.[1];
+      if (version) versions.set(match[1], version.replace(/^['"]|['"]$/g, '').replace(/\(.+\)$/, ''));
+    }
+  }
+  return versions;
 }
 
 function mapScan(row: any): DependencyScan {

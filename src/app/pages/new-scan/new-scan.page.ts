@@ -12,6 +12,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ProjectService } from '../../core/project.service';
 import { ScanService } from '../../core/scan.service';
 import { I18nService } from '../../core/i18n.service';
+import { PackageManager } from '../../core/models';
 
 const SAMPLE = `{
   "name": "checkout-service",
@@ -38,7 +39,11 @@ const SAMPLE = `{
         <form [formGroup]="form" (ngSubmit)="run()">
           <div class="form-grid">
             <mat-form-field appearance="outline"><mat-label>{{ i18n.t('table.project') }}</mat-label><mat-select formControlName="projectId">@for (project of projects.projects(); track project.id) { <mat-option [value]="project.id">{{ project.name }}</mat-option> }</mat-select></mat-form-field>
-            <mat-form-field appearance="outline"><mat-label>{{ i18n.t('field.packageManager') }}</mat-label><mat-select formControlName="packageManager"><mat-option value="npm">npm</mat-option><mat-option value="yarn">yarn</mat-option><mat-option value="pnpm">pnpm</mat-option></mat-select></mat-form-field>
+            <div class="detected-manager">
+              <span class="section-kicker">{{ i18n.t('scan.detectedManager') }}</span>
+              <strong>{{ detectedPackageManager() }}</strong>
+              <p>{{ managerDetectionText() }}</p>
+            </div>
           </div>
           <div class="editor-head">
             <strong>{{ i18n.t('scan.pastePackage') }}</strong>
@@ -52,8 +57,22 @@ const SAMPLE = `{
             </div>
           </div>
           <mat-form-field appearance="outline" class="json-field"><mat-label>package.json</mat-label><textarea matInput rows="13" formControlName="packageJson"></textarea></mat-form-field>
+          <div class="lockfile-panel">
+            <div>
+              <strong>{{ i18n.t('scan.lockfileTitle') }}</strong>
+              <p>{{ i18n.t('scan.lockfileText') }}</p>
+              @if (lockFileName()) { <span class="status-badge completed">{{ lockFileName() }} - {{ detectedLockVersions().size }} {{ i18n.t('scan.installedVersions') }}</span> }
+            </div>
+            <label class="upload-action">
+              <mat-icon>upload_file</mat-icon>
+              {{ i18n.t('scan.uploadLockfile') }}
+              <input type="file" accept="package-lock.json,pnpm-lock.yaml,yarn.lock,.lock,.yaml,.yml,.json" (change)="uploadLockfile($event)" />
+            </label>
+            @if (lockFileName()) { <button mat-button type="button" (click)="clearLockfile()">{{ i18n.t('scan.clearLockfile') }}</button> }
+          </div>
           <div class="scan-preview">
             <span [class]="'status-badge ' + (packageStatus().valid ? 'completed' : 'failed')">{{ packageStatus().valid ? i18n.t('scan.validJson') : i18n.t('scan.invalidPackage') }}</span>
+            <span [class]="'status-badge ' + (lockFileName() ? 'completed' : 'pending')">{{ lockFileName() ? i18n.t('scan.lockfileDetected') : i18n.t('scan.lockfileOptional') }}</span>
             <span class="metric-badge health good">{{ dependencyStats().dependencies }} {{ i18n.t('scan.prodDependencies') }}</span>
             <span class="metric-badge health warn">{{ dependencyStats().devDependencies }} {{ i18n.t('scan.devDependencies') }}</span>
             <span class="metric-badge health good">{{ dependencyStats().total }} {{ i18n.t('scan.dependenciesDetected') }}</span>
@@ -83,11 +102,14 @@ export class NewScanPage {
   readonly loading = signal(false);
   readonly error = signal('');
   readonly retryReady = signal(false);
+  readonly lockFileContent = signal('');
+  readonly lockFileName = signal('');
   readonly form = this.fb.nonNullable.group({
     projectId: ['', Validators.required],
-    packageManager: ['npm'],
     packageJson: [SAMPLE, Validators.required],
   });
+  readonly detectedPackageManager = computed<PackageManager>(() => detectPackageManager(this.safePackageJson(), this.lockFileName(), this.lockFileContent()));
+  readonly detectedLockVersions = computed(() => parseInstalledVersions(this.lockFileContent(), this.detectedPackageManager()));
   readonly packageStatus = computed(() => {
     try {
       JSON.parse(this.form.controls.packageJson.value);
@@ -106,6 +128,11 @@ export class NewScanPage {
       return { dependencies: 0, devDependencies: 0, total: 0 };
     }
   });
+  readonly managerDetectionText = computed(() => this.lockFileName()
+    ? this.i18n.t('scan.detectedFromLockfile')
+    : this.safePackageJson()?.packageManager
+      ? this.i18n.t('scan.detectedFromPackage')
+      : this.i18n.t('scan.detectedFallback'));
 
   loadSample() {
     this.error.set('');
@@ -126,6 +153,27 @@ export class NewScanPage {
     } finally {
       input.value = '';
     }
+  }
+
+  async uploadLockfile(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    try {
+      this.lockFileName.set(file.name);
+      this.lockFileContent.set(await file.text());
+      this.error.set('');
+      this.retryReady.set(false);
+    } catch {
+      this.error.set(this.i18n.t('scan.fileReadFailed'));
+    } finally {
+      input.value = '';
+    }
+  }
+
+  clearLockfile() {
+    this.lockFileName.set('');
+    this.lockFileContent.set('');
   }
 
   constructor() {
@@ -150,7 +198,7 @@ export class NewScanPage {
     }
     this.loading.set(true);
     try {
-      const scanId = await this.scans.runScan(this.form.controls.projectId.value, parsed);
+      const scanId = await this.scans.runScan(this.form.controls.projectId.value, parsed, this.lockFileContent(), this.detectedPackageManager(), this.lockFileName());
       this.snack.open(this.i18n.t('scan.completed'), this.i18n.t('common.close'), { duration: 2400 });
       await this.router.navigate(['/reports', scanId]);
     } catch (error: any) {
@@ -163,4 +211,62 @@ export class NewScanPage {
     }
     this.loading.set(false);
   }
+
+  private safePackageJson() {
+    try {
+      return JSON.parse(this.form.controls.packageJson.value);
+    } catch {
+      return null;
+    }
+  }
+}
+
+function detectPackageManager(packageJson: any, lockFileName: string, lockFileContent: string): PackageManager {
+  const name = lockFileName.toLowerCase();
+  if (name.includes('pnpm-lock')) return 'pnpm';
+  if (name.includes('yarn.lock')) return 'yarn';
+  if (name.includes('package-lock')) return 'npm';
+  if (lockFileContent.includes('lockfileVersion:') && lockFileContent.includes('importers:')) return 'pnpm';
+  if (lockFileContent.includes('__metadata:') || /^\S.*@.*:\n\s+version/m.test(lockFileContent)) return 'yarn';
+  const declared = String(packageJson?.packageManager ?? '').toLowerCase();
+  if (declared.startsWith('pnpm@')) return 'pnpm';
+  if (declared.startsWith('yarn@')) return 'yarn';
+  if (declared.startsWith('npm@')) return 'npm';
+  return 'npm';
+}
+
+function parseInstalledVersions(lockFileContent: string, packageManager: PackageManager) {
+  const versions = new Map<string, string>();
+  if (!lockFileContent.trim()) return versions;
+  if (packageManager === 'npm') {
+    try {
+      const parsed = JSON.parse(lockFileContent);
+      for (const [path, meta] of Object.entries<any>(parsed.packages ?? {})) {
+        if (path.startsWith('node_modules/') && meta?.version) versions.set(path.replace(/^node_modules\//, ''), String(meta.version));
+      }
+      for (const [name, meta] of Object.entries<any>(parsed.dependencies ?? {})) {
+        if (meta?.version && !versions.has(name)) versions.set(name, String(meta.version));
+      }
+    } catch {}
+  } else if (packageManager === 'yarn') {
+    for (const block of lockFileContent.split(/\n(?=\S)/)) {
+      const version = block.match(/\n\s+version\s+"([^"]+)"/)?.[1];
+      if (!version) continue;
+      const header = block.split('\n')[0] ?? '';
+      for (const token of header.split(',')) {
+        const clean = token.trim().replace(/^"|"$/g, '');
+        const rangeIndex = clean.startsWith('@') ? clean.indexOf('@', 1) : clean.indexOf('@');
+        const name = rangeIndex > 0 ? clean.slice(0, rangeIndex) : clean;
+        if (name && !versions.has(name)) versions.set(name, version);
+      }
+    }
+  } else {
+    const dependencyLine = /^\s{4}((?:@[^/\s]+\/)?[^:\s]+):\s*(.+)$/gm;
+    let match: RegExpExecArray | null;
+    while ((match = dependencyLine.exec(lockFileContent))) {
+      const version = match[2].match(/version:\s*([^\s,}]+)/)?.[1] ?? match[2].match(/^([0-9]+\.[0-9]+\.[0-9][^\s]*)/)?.[1];
+      if (version) versions.set(match[1], version.replace(/^['"]|['"]$/g, '').replace(/\(.+\)$/, ''));
+    }
+  }
+  return versions;
 }
