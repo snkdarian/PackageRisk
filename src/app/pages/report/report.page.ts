@@ -123,10 +123,10 @@ import { I18nService } from '../../core/i18n.service';
                       <mat-checkbox [checked]="isUpdateSelected(item.id)" (change)="toggleUpdate(item.id, $event.checked)">
                         <strong>{{ item.packageName }}</strong>
                       </mat-checkbox>
-                      <span>{{ item.currentRange }} -> {{ plannedRange(item) }}</span>
+                      <span class="planner-version">{{ item.currentRange }} -> {{ plannedRange(item) }} @if (item.updateType === 'major') { <small>{{ i18n.t('report.manualTesting') }}</small> }</span>
                       <div class="planner-badges">
-                        <app-risk-badge [level]="item.riskLevel" />
-                        <span [class]="'metric-badge update ' + item.updateType">{{ i18n.t('update.' + item.updateType) }}</span>
+                        <span class="badge-group"><small>{{ i18n.t('report.packageRisk') }}</small><app-risk-badge [level]="item.riskLevel" /></span>
+                        <span class="badge-group"><small>{{ i18n.t('report.updateType') }}</small><span [class]="'metric-badge update ' + item.updateType">{{ i18n.t('update.' + item.updateType) }}</span></span>
                       </div>
                     </article>
                   } @empty {
