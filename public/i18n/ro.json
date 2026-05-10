@@ -194,6 +194,7 @@
   "report.outdated": "Pachete neactualizate",
   "report.overallHealth": "Scor general de sanatate",
   "report.packageRisk": "Risc",
+  "report.packageSingular": "pachet",
   "report.packages": "pachete",
   "report.production": "Productie",
   "report.prediction": "Predictie",

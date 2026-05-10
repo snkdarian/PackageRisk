@@ -55,7 +55,7 @@ import { I18nService } from '../../core/i18n.service';
         @for (lane of actionLanes(); track lane.key) {
           <mat-card [class]="'action-lane ' + lane.tone">
             <div>
-              <span class="section-kicker">{{ lane.count }} {{ i18n.t('report.packages') }}</span>
+              <span class="section-kicker">{{ packageCountLabel(lane.count) }}</span>
               <h2>{{ lane.title }}</h2>
               <p>{{ lane.text }}</p>
             </div>
@@ -341,6 +341,7 @@ export class ReportPage {
     return this.i18n.t('report.triageHealthyText');
   }
   signed(value: number) { return value > 0 ? `+${value}` : String(value); }
+  packageCountLabel(count: number) { return `${count} ${count === 1 ? this.i18n.t('report.packageSingular') : this.i18n.t('report.packages')}`; }
   copy(command: string) { navigator.clipboard?.writeText(command); }
 }
 

@@ -194,6 +194,7 @@
   "report.outdated": "Outdated packages",
   "report.overallHealth": "Overall Health Score",
   "report.packageRisk": "Risk",
+  "report.packageSingular": "package",
   "report.packages": "packages",
   "report.production": "Production",
   "report.prediction": "Prediction",
