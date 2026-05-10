@@ -116,6 +116,22 @@ import { I18nService } from '../../core/i18n.service';
                 <div class="planner-actions">
                   <button mat-stroked-button type="button" (click)="selectRecommendedUpdates()"><mat-icon>playlist_add_check</mat-icon>{{ i18n.t('report.selectRecommended') }}</button>
                   <button mat-stroked-button type="button" (click)="clearUpdateSelection()"><mat-icon>remove_done</mat-icon>{{ i18n.t('report.clearSelection') }}</button>
+                  <button mat-stroked-button type="button" (click)="saveUpdatePlan()"><mat-icon>save</mat-icon>{{ i18n.t('report.savePlan') }}</button>
+                  @if (hasSavedUpdatePlan()) {
+                    <button mat-stroked-button type="button" (click)="restoreUpdatePlan()"><mat-icon>restore</mat-icon>{{ i18n.t('report.restorePlan') }}</button>
+                  }
+                </div>
+                <div [class]="'planner-summary ' + selectedUpdateTone()">
+                  <div>
+                    <span class="section-kicker">{{ i18n.t('report.selectionSummary') }}</span>
+                    <strong>{{ selectedUpdateSummary() }}</strong>
+                    <p>{{ selectedUpdateGuidance() }}</p>
+                  </div>
+                  <div class="planner-summary-metrics">
+                    <span><strong>{{ selectedUpdateItems().length }}</strong>{{ i18n.t('report.selected') }}</span>
+                    <span><strong>{{ selectedMajorUpdates() }}</strong>{{ i18n.t('update.major') }}</span>
+                    <span><strong>{{ selectedRiskyUpdates() }}</strong>{{ i18n.t('report.highRiskShort') }}</span>
+                  </div>
                 </div>
                 <div class="planner-list">
                   @if (updatableItems().length) {
@@ -145,7 +161,7 @@ import { I18nService } from '../../core/i18n.service';
               <mat-card class="table-card planner-preview">
                 <div class="card-head">
                   <h2>{{ i18n.t('report.updatedPackageJson') }}</h2>
-                  <span>{{ selectedUpdateItems().length }} {{ i18n.t('report.selected') }}</span>
+                  <span>{{ packageJsonStatus() }}</span>
                 </div>
                 <div class="planner-actions">
                   <button mat-flat-button class="mini-action" type="button" (click)="copyUpdatedPackageJson()"><mat-icon>content_copy</mat-icon>{{ i18n.t('common.copy') }}</button>
@@ -323,6 +339,7 @@ export class ReportPage {
   private readonly id = signal(this.route.snapshot.paramMap.get('scanId') ?? '');
   readonly report = computed(() => this.scans.getReport(this.id()));
   readonly selectedUpdateIds = signal<string[]>([]);
+  readonly savedUpdatePlanIds = signal<string[]>([]);
   private readonly selectionInitializedFor = signal('');
   readonly search = signal('');
   readonly riskFilter = signal<RiskLevel | 'all'>('all');
@@ -367,6 +384,13 @@ export class ReportPage {
   readonly updatedPackageJsonText = computed(() => JSON.stringify(this.updatedPackageJson(), null, 2));
   readonly selectedProdUpdates = computed(() => this.selectedUpdateItems().filter((item) => item.dependencyType === 'dependency'));
   readonly selectedDevUpdates = computed(() => this.selectedUpdateItems().filter((item) => item.dependencyType === 'devDependency'));
+  readonly selectedMajorUpdates = computed(() => this.selectedUpdateItems().filter((item) => item.updateType === 'major').length);
+  readonly selectedRiskyUpdates = computed(() => this.selectedUpdateItems().filter((item) => item.isVulnerable || item.riskLevel === 'critical' || item.riskLevel === 'high').length);
+  readonly selectedPatchMinorUpdates = computed(() => this.selectedUpdateItems().filter((item) => item.updateType === 'patch' || item.updateType === 'minor').length);
+  readonly hasSavedUpdatePlan = computed(() => {
+    const saved = new Set(this.savedUpdatePlanIds());
+    return this.updatableItems().some((item) => saved.has(item.id));
+  });
   readonly prodInstallCommand = computed(() => buildInstallCommand(this.report()?.project.packageManager ?? 'npm', this.selectedProdUpdates(), false));
   readonly devInstallCommand = computed(() => buildInstallCommand(this.report()?.project.packageManager ?? 'npm', this.selectedDevUpdates(), true));
   readonly chartText = '#9cadc8';
@@ -394,7 +418,9 @@ export class ReportPage {
     effect(() => {
       const scanId = this.report()?.scan.id ?? '';
       if (!scanId || this.selectionInitializedFor() === scanId) return;
-      this.selectedUpdateIds.set(this.recommendedUpdateItems().map((item) => item.id));
+      const saved = loadUpdatePlan(scanId);
+      this.savedUpdatePlanIds.set(saved);
+      this.selectedUpdateIds.set(saved.length ? saved : this.recommendedUpdateItems().map((item) => item.id));
       this.selectionInitializedFor.set(scanId);
     });
   }
@@ -545,7 +571,40 @@ export class ReportPage {
   }
   selectRecommendedUpdates() { this.selectedUpdateIds.set(this.recommendedUpdateItems().map((item) => item.id)); }
   clearUpdateSelection() { this.selectedUpdateIds.set([]); }
+  saveUpdatePlan() {
+    const scanId = this.report()?.scan.id;
+    if (!scanId) return;
+    const ids = this.selectedUpdateIds();
+    localStorage.setItem(updatePlanStorageKey(scanId), JSON.stringify(ids));
+    this.savedUpdatePlanIds.set(ids);
+  }
+  restoreUpdatePlan() {
+    const saved = new Set(this.savedUpdatePlanIds());
+    this.selectedUpdateIds.set(this.updatableItems().filter((item) => saved.has(item.id)).map((item) => item.id));
+  }
   plannedRange(item: DependencyScanItem) { return preserveRangePrefix(item.currentRange, item.latestVersion); }
+  packageJsonStatus() {
+    const count = this.selectedUpdateItems().length;
+    return count ? `${count} ${this.i18n.t('report.changesReady')}` : this.i18n.t('report.noChangesSelected');
+  }
+  selectedUpdateTone() {
+    if (!this.selectedUpdateItems().length) return 'neutral';
+    if (this.selectedRiskyUpdates() || this.selectedMajorUpdates()) return 'warn';
+    return 'good';
+  }
+  selectedUpdateSummary() {
+    const count = this.selectedUpdateItems().length;
+    if (!count) return this.i18n.t('report.noUpdatesSelected');
+    if (this.selectedRiskyUpdates()) return this.i18n.t('report.selectionRisky');
+    if (this.selectedMajorUpdates()) return this.i18n.t('report.selectionMajor');
+    return this.i18n.t('report.selectionLowRisk');
+  }
+  selectedUpdateGuidance() {
+    if (!this.selectedUpdateItems().length) return this.i18n.t('report.selectionEmptyText');
+    if (this.selectedRiskyUpdates()) return this.i18n.t('report.selectionRiskyText');
+    if (this.selectedMajorUpdates()) return this.i18n.t('report.selectionMajorText');
+    return this.i18n.t('report.selectionLowRiskText');
+  }
   copyUpdatedPackageJson() { this.copy(this.updatedPackageJsonText()); }
   downloadUpdatedPackageJson() {
     const blob = new Blob([this.updatedPackageJsonText()], { type: 'application/json' });
@@ -595,4 +654,18 @@ function buildInstallCommand(manager: string, items: DependencyScanItem[], dev: 
   if (manager === 'yarn') return `yarn add ${dev ? '-D ' : ''}${packages}`;
   if (manager === 'pnpm') return `pnpm add ${dev ? '-D ' : ''}${packages}`;
   return `npm install ${dev ? '-D ' : ''}${packages}`;
+}
+
+function updatePlanStorageKey(scanId: string) {
+  return `package-risk-update-plan:${scanId}`;
+}
+
+function loadUpdatePlan(scanId: string) {
+  try {
+    const value = localStorage.getItem(updatePlanStorageKey(scanId));
+    const parsed = value ? JSON.parse(value) : [];
+    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : [];
+  } catch {
+    return [];
+  }
 }
